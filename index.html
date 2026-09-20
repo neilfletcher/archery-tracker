@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neil Fletcher: Archery Tracker</title>
+<meta name="description" content="Live archery progress tracker, pulled from Neil Fletcher's competition and practice log.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --card-border:    rgba(11,11,11,0.08);
+    --success-text:   #006300;
+
+    --recurve:   #2a78d6;
+    --barebow:   #eb6834;
+    --compound:  #1baf7a;
+    --longbow:   #eda100;
+    --special:   #4a3aa7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --card-border:    rgba(255,255,255,0.10);
+      --success-text:   #0ca30c;
+
+      --recurve:   #3987e5;
+      --barebow:   #d95926;
+      --compound:  #199e70;
+      --longbow:   #c98500;
+      --special:   #9085e9;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page-plane:     #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --card-border:    rgba(255,255,255,0.10);
+    --success-text:   #0ca30c;
+
+    --recurve:   #3987e5;
+    --barebow:   #d95926;
+    --compound:  #199e70;
+    --longbow:   #c98500;
+    --special:   #9085e9;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 64px; }
+
+  header.page-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--text-secondary); font-size: 0.92rem; margin: 0; }
+  .status-line { color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }
+
+  button.theme-toggle {
+    background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 0.82rem; cursor: pointer;
+  }
+  button.theme-toggle:hover { background: var(--page-plane); }
+
+  nav.tabs {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--gridline);
+    margin-bottom: 20px; padding-bottom: 0;
+  }
+  nav.tabs button {
+    background: none; border: none; cursor: pointer;
+    font-family: inherit; font-size: 0.88rem; font-weight: 600;
+    color: var(--text-secondary); padding: 10px 14px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  nav.tabs button.active { color: var(--text-primary); border-bottom-color: var(--dot, var(--text-primary)); }
+  nav.tabs button:hover { color: var(--text-primary); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--surface-1); border: 1px solid var(--card-border);
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
+  }
+  .card h2 { font-size: 1.02rem; margin: 0 0 4px; }
+  .card h3 { font-size: 0.92rem; margin: 0 0 10px; color: var(--text-secondary); font-weight: 600; }
+  .card-note { color: var(--text-muted); font-size: 0.78rem; margin: 2px 0 14px; }
+
+  .tile-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .tile {
+    background: var(--surface-1); border: 1px solid var(--card-border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .tile .label { font-size: 0.74rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.02em; }
+  .tile .value { font-size: 1.3rem; font-weight: 600; line-height: 1.25; }
+  .tile .value small { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-secondary); margin-top: 2px; }
+  .tile .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+  .chart-box { position: relative; height: 280px; margin-bottom: 4px; }
+  .chart-legend-note { color: var(--text-muted); font-size: 0.76rem; margin-top: 8px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  thead th {
+    text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em;
+    color: var(--text-muted); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--gridline);
+    position: sticky; top: 0; background: var(--surface-1);
+  }
+  tbody td { padding: 7px 10px; border-bottom: 1px solid var(--gridline); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { font-variant-numeric: tabular-nums; text-align: right; }
+  .table-scroll { max-height: 420px; overflow-y: auto; border: 1px solid var(--gridline); border-radius: 8px; }
+  .table-wide-scroll { overflow-x: auto; }
+
+  .badge {
+    display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em;
+    padding: 2px 6px; border-radius: 4px; margin-right: 6px; color: #fff;
+  }
+  .badge.p1 { background: #9a7a12; }
+  .badge.p2 { background: #6d6d6d; }
+  .badge.p3 { background: #8a5a34; }
+  .badge.rec { background: var(--recurve); }
+
+  .status-good { color: var(--success-text); font-weight: 600; }
+  .status-pending { color: var(--text-muted); }
+
+  select, input[type=text] {
+    font-family: inherit; font-size: 0.82rem; padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface-1); color: var(--text-primary);
+  }
+  .controls-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+
+  .error-box {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5;
+  }
+  .error-box code { background: var(--page-plane); padding: 1px 5px; border-radius: 4px; font-size: 0.82rem; }
+
+  footer { color: var(--text-muted); font-size: 0.78rem; margin-top: 32px; text-align: center; }
+  footer a { color: var(--text-secondary); }
+
+  @media (max-width: 560px) {
+    .tile-row { grid-template-columns: repeat(2, 1fr); }
+    nav.tabs button { padding: 8px 10px; font-size: 0.82rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-head">
+    <div>
+      <h1>Archery Tracker</h1>
+      <p class="sub">Neil Fletcher: competition and practice log</p>
+      <p class="status-line" id="statusLine">Loading live data…</p>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button">Toggle theme</button>
+  </header>
+
+  <nav class="tabs" id="tabs" style="display:none;"></nav>
+  <div id="panels"></div>
+
+  <div id="loadError" style="display:none;"></div>
+
+  <footer>
+    Data pulled live from <a id="sourceLink" href="#" target="_blank" rel="noopener">the source spreadsheet</a>
+    on each page load. Handicap: lower is better (chart axis is inverted so an upward line means improvement).
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- Configuration -------------------------------------------------
+  var SHEET_ID = "1cm0klFvQPp5hMvOrENk2EhT7aoNs9P7o";
+  var SHEET_GID = "1759126703";
+  var CSV_URL = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&gid=" + SHEET_GID;
+  var CSV_URL_FALLBACK = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/export?format=csv&gid=" + SHEET_GID;
+  var SOURCE_VIEW_URL = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/edit?gid=" + SHEET_GID;
+  document.getElementById("sourceLink").href = SOURCE_VIEW_URL;
+
+  var DISCIPLINE_ORDER = ["Recurve", "Barebow", "Compound", "Longbow"];
+  var DISCIPLINE_COLOR = {
+    Recurve: "--recurve", Barebow: "--barebow", Compound: "--compound", Longbow: "--longbow"
+  };
+  var OUTDOOR_ORDER = ["Archer 3rd Class","Archer 2nd Class","Archer 1st Class","Bowman 3rd Class","Bowman 2nd Class","Bowman 1st Class","Master Bowman","Grand Master Bowman"];
+  var INDOOR_ORDER  = ["Indoor Archer 3rd Class","Indoor Archer 2nd Class","Indoor Archer 1st Class","Indoor Bowman 3rd Class","Indoor Bowman 2nd Class","Indoor Bowman 1st Class","Indoor Master Bowman","Indoor Grand Master Bowman"];
+
+  var MONTHS = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
+
+  // The "252" practice ladder: a fixed target shot at increasing distances.
+  var LADDER_DISTANCES = [20, 30, 40, 50, 60, 80, 100];
+  var LADDER_RE = /^252 attempt at (\d+)\s*yds$/i;
+
+  // ---- Theme toggle ----------------------------------------------------
+  (function themeInit() {
+    var saved = null;
+    try { saved = localStorage.getItem("archery-theme"); } catch (e) {}
+    if (saved) document.documentElement.setAttribute("data-theme", saved);
+    document.getElementById("themeToggle").addEventListener("click", function () {
+      var cur = document.documentElement.getAttribute("data-theme");
+      var next = cur === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("archery-theme", next); } catch (e) {}
+      renderAllCharts();
+    });
+  })();
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // ---- CSV parsing (RFC4180-ish, handles quoted multi-line fields) ----
+  function parseCSV(text) {
+    var rows = [], row = [], field = "", inQuotes = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = false; }
+        } else {
+          field += c;
+        }
+      } else {
+        if (c === '"') { inQuotes = true; }
+        else if (c === ",") { row.push(field); field = ""; }
+        else if (c === "\r") { /* skip */ }
+        else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+        else { field += c; }
+      }
+    }
+    if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+    return rows;
+  }
+
+  function parseDate(s) {
+    if (!s) return null;
+    var m = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(s.trim());
+    if (!m) return null;
+    var month = MONTHS[m[2]];
+    if (month === undefined) return null;
+    return new Date(Number(m[3]), month, Number(m[1]));
+  }
+
+  function num(v) {
+    if (v === undefined || v === null) return null;
+    var s = String(v).trim();
+    if (s === "" || s === "#N/A" || s === "#REF!" || s === "#VALUE!") return null;
+    var n = parseFloat(s.replace(/,/g, ""));
+    return isFinite(n) ? n : null;
+  }
+
+  function cls(v) {
+    if (!v) return null;
+    var s = String(v).trim();
+    if (s === "" || s === "#N/A" || s === "#REF!" || s === "#VALUE!") return null;
+    return s;
+  }
+
+  function fmtDate(d) {
+    if (!d) return "-";
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  }
+
+  // ---- Turn raw CSV rows into entries ----------------------------------
+  function buildEntries(rows) {
+    var headerIdx = -1;
+    for (var i = 0; i < rows.length; i++) {
+      if ((rows[i][0] || "").trim() === "Date") { headerIdx = i; break; }
+    }
+    if (headerIdx === -1) throw new Error("Could not find the header row (expected a 'Date' column).");
+
+    var entries = [];
+    for (var r = headerIdx + 1; r < rows.length; r++) {
+      var row = rows[r];
+      var dateStr = (row[0] || "").trim();
+      if (!dateStr) continue; // spacer / #REF! junk row
+      var date = parseDate(dateStr);
+      if (!date) continue;
+
+      var category = (row[1] || "").trim();
+      var bowType = (row[2] || "").trim();
+      var round = (row[3] || "").trim();
+      var score = num(row[4]);
+      var classification = cls(row[5]);
+      var handicapRating = num(row[6]);
+      var newHandicap = num(row[7]);
+      var handicapAllowance = num(row[8]);
+      var handicapAdjustedScore = num(row[9]);
+      var comment = (row[10] || "").trim();
+
+      var bucket;
+      if (bowType) bucket = bowType;
+      else if (!round) bucket = "Special";
+      else bucket = "Other";
+
+      entries.push({
+        date: date, dateStr: dateStr, category: category, bowType: bowType, bucket: bucket,
+        round: round, score: score, classification: classification,
+        handicapRating: handicapRating, newHandicap: newHandicap,
+        handicapAllowance: handicapAllowance, handicapAdjustedScore: handicapAdjustedScore,
+        comment: comment
+      });
+    }
+    entries.sort(function (a, b) { return a.date - b.date; });
+    return entries;
+  }
+
+  // ---- Derived stats per discipline -------------------------------------
+  function rankOf(order, value) {
+    var idx = order.indexOf(value);
+    return idx === -1 ? -1 : idx;
+  }
+
+  function disciplineStats(entries) {
+    var indoorHist = entries.filter(function (e) { return e.classification && e.classification.indexOf("Indoor") === 0; });
+    var outdoorHist = entries.filter(function (e) { return e.classification && e.classification.indexOf("Indoor") !== 0; });
+
+    var currentIndoor = indoorHist.length ? indoorHist[indoorHist.length - 1] : null;
+    var currentOutdoor = outdoorHist.length ? outdoorHist[outdoorHist.length - 1] : null;
+
+    var bestIndoor = null, bestIndoorRank = -1;
+    indoorHist.forEach(function (e) {
+      var rk = rankOf(INDOOR_ORDER, e.classification);
+      if (rk > bestIndoorRank) { bestIndoorRank = rk; bestIndoor = e; }
+    });
+    var bestOutdoor = null, bestOutdoorRank = -1;
+    outdoorHist.forEach(function (e) {
+      var rk = rankOf(OUTDOOR_ORDER, e.classification);
+      if (rk > bestOutdoorRank) { bestOutdoorRank = rk; bestOutdoor = e; }
+    });
+
+    var handicaps = entries.filter(function (e) { return e.newHandicap !== null; });
+    var pbHandicapEntry = null;
+    handicaps.forEach(function (e) {
+      if (!pbHandicapEntry || e.newHandicap < pbHandicapEntry.newHandicap) pbHandicapEntry = e;
+    });
+
+    var lastShoot = entries.length ? entries[entries.length - 1] : null;
+
+    // personal bests by round type
+    var byRound = {};
+    entries.forEach(function (e) {
+      if (!e.round || e.score === null) return;
+      if (!byRound[e.round] || e.score > byRound[e.round].score) byRound[e.round] = e;
+    });
+    var pbRows = Object.keys(byRound).map(function (k) { return byRound[k]; })
+      .sort(function (a, b) { return b.date - a.date; });
+
+    var awards = entries.filter(function (e) { return /\b(1st|2nd|3rd)\b.*place|place.*\b(1st|2nd|3rd)\b|record status/i.test(e.comment); });
+
+    return {
+      currentIndoor: currentIndoor, currentOutdoor: currentOutdoor,
+      bestIndoor: bestIndoor, bestOutdoor: bestOutdoor,
+      pbHandicapEntry: pbHandicapEntry, lastShoot: lastShoot,
+      pbRows: pbRows, awards: awards, count: entries.length
+    };
+  }
+
+  // Best score at each 252-ladder distance, keyed by distance in yards.
+  function ladderStats(entries) {
+    var byDist = {};
+    entries.forEach(function (e) {
+      var m = LADDER_RE.exec(e.round);
+      if (!m || e.score === null) return;
+      var d = Number(m[1]);
+      if (!byDist[d] || e.score > byDist[d].score) byDist[d] = e;
+    });
+    return byDist;
+  }
+
+  // Best score per round type, excluding the 252-ladder rounds (which get their own view).
+  function pbByRound(entries) {
+    var out = {};
+    entries.forEach(function (e) {
+      if (!e.round || e.score === null || LADDER_RE.test(e.round)) return;
+      if (!out[e.round] || e.score > out[e.round].score) out[e.round] = e;
+    });
+    return out;
+  }
+
+  function medalBadge(comment) {
+    if (/1st/i.test(comment)) return '<span class="badge p1">1ST</span>';
+    if (/2nd/i.test(comment)) return '<span class="badge p2">2ND</span>';
+    if (/3rd/i.test(comment)) return '<span class="badge p3">3RD</span>';
+    return "";
+  }
+
+  // ---- Chart rendering ---------------------------------------------------
+  var chartInstances = [];
+
+  function makeHandicapChart(canvasId, datasets) {
+    var el = document.getElementById(canvasId);
+    if (!el) return;
+    var gridColor = cssVar("--gridline");
+    var tickColor = cssVar("--text-muted");
+    var surface = cssVar("--surface-1");
+    var chart = new Chart(el.getContext("2d"), {
+      type: "line",
+      data: { datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: "nearest", intersect: false },
+        scales: {
+          x: {
+            type: "time",
+            time: { unit: "month", tooltipFormat: "dd MMM yyyy" },
+            grid: { color: gridColor, drawTicks: false },
+            ticks: { color: tickColor, font: { size: 11 } },
+            border: { color: cssVar("--baseline") }
+          },
+          y: {
+            reverse: true,
+            grid: { color: gridColor, drawTicks: false },
+            ticks: { color: tickColor, font: { size: 11 } },
+            border: { color: cssVar("--baseline") },
+            title: { display: true, text: "Handicap (lower is better)", color: tickColor, font: { size: 11 } }
+          }
+        },
+        plugins: {
+          legend: {
+            display: datasets.length > 1,
+            labels: { color: cssVar("--text-secondary"), usePointStyle: true, pointStyle: "circle", boxWidth: 8, font: { size: 12 } }
+          },
+          tooltip: {
+            backgroundColor: surface, titleColor: cssVar("--text-primary"), bodyColor: cssVar("--text-secondary"),
+            borderColor: cssVar("--border"), borderWidth: 1, padding: 10, boxPadding: 4,
+            callbacks: {
+              label: function (ctx) {
+                var d = ctx.raw && ctx.raw.entry;
+                if (!d) return "Handicap " + ctx.formattedValue;
+                var parts = [d.round + ": handicap " + d.newHandicap];
+                if (d.score !== null) parts[0] += " (score " + d.score + ")";
+                if (d.classification) parts.push(d.classification);
+                return parts;
+              }
+            }
+          }
+        }
+      }
+    });
+    chartInstances.push(chart);
+    return chart;
+  }
+
+  function seriesFor(entries, colorVar) {
+    var color = cssVar(colorVar);
+    var points = entries.filter(function (e) { return e.newHandicap !== null; })
+      .map(function (e) { return { x: e.date, y: e.newHandicap, entry: e }; });
+    return {
+      data: points, borderColor: color, backgroundColor: color,
+      pointBackgroundColor: color, pointBorderColor: cssVar("--surface-1"),
+      pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+      borderWidth: 2, tension: 0, spanGaps: true
+    };
+  }
+
+  function destroyCharts() {
+    chartInstances.forEach(function (c) { c.destroy(); });
+    chartInstances = [];
+  }
+
+  var lastEntriesByBucket = null, lastOverviewLabel = "";
+
+  function renderAllCharts() {
+    if (!lastEntriesByBucket) return;
+    destroyCharts();
+    var overviewDatasets = DISCIPLINE_ORDER
+      .filter(function (d) { return lastEntriesByBucket[d]; })
+      .map(function (d) {
+        var s = seriesFor(lastEntriesByBucket[d], DISCIPLINE_COLOR[d]);
+        s.label = d;
+        return s;
+      });
+    makeHandicapChart("chart-overview", overviewDatasets);
+    DISCIPLINE_ORDER.forEach(function (d) {
+      if (!lastEntriesByBucket[d]) return;
+      var s = seriesFor(lastEntriesByBucket[d], DISCIPLINE_COLOR[d]);
+      s.label = d;
+      makeHandicapChart("chart-" + d.toLowerCase(), [s]);
+    });
+  }
+
+  // ---- Panel builders -----------------------------------------------------
+  function tile(label, value, small, dotVar) {
+    var dot = dotVar ? '<span class="dot" style="background:var(' + dotVar + ')"></span>' : "";
+    return '<div class="tile"><div class="label">' + label + '</div><div class="value">' + dot + value +
+      (small ? "<small>" + small + "</small>" : "") + "</div></div>";
+  }
+
+  function classificationLine(entry, fallback) {
+    if (!entry) return fallback;
+    return entry.classification + " <small style=\"color:var(--text-muted)\">(" + fmtDate(entry.date) + ")</small>";
+  }
+
+  function buildDisciplinePanel(name, entries) {
+    var stats = disciplineStats(entries);
+    var colorVar = DISCIPLINE_COLOR[name];
+    var rounds = Array.from(new Set(entries.map(function (e) { return e.round; }).filter(Boolean))).sort();
+
+    var html = "";
+    html += '<div class="tile-row">';
+    html += tile("Shoots logged", stats.count, null, colorVar);
+    html += tile("Personal best handicap", stats.pbHandicapEntry ? stats.pbHandicapEntry.newHandicap : "-",
+      stats.pbHandicapEntry ? (stats.pbHandicapEntry.round + " · " + fmtDate(stats.pbHandicapEntry.date)) : "");
+    html += tile("Last shoot", stats.lastShoot ? fmtDate(stats.lastShoot.date) : "-",
+      stats.lastShoot ? stats.lastShoot.round : "");
+    html += tile("Outdoor classification", stats.currentOutdoor ? stats.currentOutdoor.classification : "-",
+      stats.currentOutdoor ? "as of " + fmtDate(stats.currentOutdoor.date) : "not yet classified");
+    html += tile("Indoor classification", stats.currentIndoor ? stats.currentIndoor.classification : "-",
+      stats.currentIndoor ? "as of " + fmtDate(stats.currentIndoor.date) : "not yet classified");
+    html += "</div>";
+
+    html += '<div class="card"><h2>Handicap progression: ' + name + '</h2>';
+    html += '<p class="card-note">Every recorded shoot for this bow type, chart axis inverted so an improving handicap reads as an upward line.</p>';
+    html += '<div class="chart-box"><canvas id="chart-' + name.toLowerCase() + '"></canvas></div></div>';
+
+    if (stats.awards.length) {
+      html += '<div class="card"><h2>Notable results</h2><div class="table-scroll"><table><thead><tr>' +
+        '<th>Date</th><th>Round</th><th class="num">Score</th><th>Comment</th></tr></thead><tbody>';
+      stats.awards.slice().sort(function (a, b) { return b.date - a.date; }).forEach(function (e) {
+        html += "<tr><td>" + fmtDate(e.date) + "</td><td>" + e.round + '</td><td class="num">' + (e.score !== null ? e.score : "-") +
+          "</td><td>" + medalBadge(e.comment) + escapeHtml(e.comment) + "</td></tr>";
+      });
+      html += "</tbody></table></div></div>";
+    }
+
+    html += '<div class="card"><h2>Personal bests by round</h2><div class="table-scroll"><table><thead><tr>' +
+      '<th>Round</th><th class="num">Best score</th><th>Date</th><th>Classification</th></tr></thead><tbody>';
+    stats.pbRows.forEach(function (e) {
+      html += "<tr><td>" + e.round + '</td><td class="num">' + e.score + "</td><td>" + fmtDate(e.date) +
+        "</td><td>" + (e.classification || "-") + "</td></tr>";
+    });
+    html += "</tbody></table></div></div>";
+
+    html += '<div class="card"><h2>Full log: ' + name + '</h2>';
+    html += '<div class="controls-row"><label for="filter-' + name + '" style="font-size:0.82rem;color:var(--text-secondary);">Round:</label>' +
+      '<select id="filter-' + name + '"><option value="">All rounds</option>' +
+      rounds.map(function (r) { return '<option value="' + escapeHtml(r) + '">' + escapeHtml(r) + "</option>"; }).join("") +
+      "</select></div>";
+    html += '<div class="table-scroll table-wide-scroll"><table id="table-' + name + '"><thead><tr>' +
+      "<th>Date</th><th>Round</th><th class=\"num\">Score</th><th>Classification</th><th class=\"num\">Handicap</th><th>Comment</th></tr></thead><tbody></tbody></table></div></div>";
+
+    return { html: html, entries: entries };
+  }
+
+  function renderDisciplineTable(name, entries, filterRound) {
+    var tbody = document.querySelector("#table-" + name + " tbody");
+    if (!tbody) return;
+    var rows = entries.slice().sort(function (a, b) { return b.date - a.date; })
+      .filter(function (e) { return !filterRound || e.round === filterRound; });
+    tbody.innerHTML = rows.map(function (e) {
+      return "<tr><td>" + fmtDate(e.date) + "</td><td>" + escapeHtml(e.round) + '</td><td class="num">' +
+        (e.score !== null ? e.score : "-") + "</td><td>" + (e.classification || "-") + '</td><td class="num">' +
+        (e.newHandicap !== null ? e.newHandicap : "-") + "</td><td>" + escapeHtml(e.comment) + "</td></tr>";
+    }).join("");
+  }
+
+  function escapeHtml(s) {
+    return String(s || "").replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function buildOverviewPanel(entriesByBucket, specialEntries) {
+    var allAwards = [];
+    DISCIPLINE_ORDER.forEach(function (d) {
+      if (!entriesByBucket[d]) return;
+      disciplineStats(entriesByBucket[d]).awards.forEach(function (e) {
+        allAwards.push({ discipline: d, entry: e });
+      });
+    });
+    (specialEntries || []).forEach(function (e) { allAwards.push({ discipline: "Special shoot", entry: e }); });
+    allAwards.sort(function (a, b) { return b.entry.date - a.entry.date; });
+
+    var html = '<div class="tile-row">';
+    DISCIPLINE_ORDER.forEach(function (d) {
+      if (!entriesByBucket[d]) return;
+      var s = disciplineStats(entriesByBucket[d]);
+      var current = s.currentOutdoor || s.currentIndoor;
+      html += tile(d, current ? current.classification : (s.count + " shoots"),
+        s.pbHandicapEntry ? "PB handicap " + s.pbHandicapEntry.newHandicap : "", DISCIPLINE_COLOR[d]);
+    });
+    html += "</div>";
+
+    html += '<div class="card"><h2>Handicap progression: all disciplines</h2>';
+    html += '<p class="card-note">Lower handicap is better; the axis is inverted so an upward line always means improvement.</p>';
+    html += '<div class="chart-box"><canvas id="chart-overview"></canvas></div></div>';
+
+    html += '<div class="card"><h2>Trophy cabinet</h2><p class="card-note">Podium finishes and notable results across every discipline, most recent first.</p>';
+    if (allAwards.length) {
+      html += '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Discipline</th><th>Round</th><th class="num">Score</th><th>Comment</th></tr></thead><tbody>';
+      allAwards.forEach(function (a) {
+        html += "<tr><td>" + fmtDate(a.entry.date) + "</td><td>" + a.discipline + "</td><td>" + (a.entry.round || "-") +
+          '</td><td class="num">' + (a.entry.score !== null ? a.entry.score : "-") + "</td><td>" +
+          medalBadge(a.entry.comment) + escapeHtml(a.entry.comment) + "</td></tr>";
+      });
+      html += "</tbody></table></div>";
+    } else {
+      html += "<p>No podium finishes recorded yet.</p>";
+    }
+    html += "</div>";
+
+    var disciplinesPresent = DISCIPLINE_ORDER.filter(function (d) { return entriesByBucket[d]; });
+
+    // Cross-discipline personal bests, one row per round type shot.
+    var allRounds = {};
+    disciplinesPresent.forEach(function (d) {
+      Object.keys(pbByRound(entriesByBucket[d])).forEach(function (r) { allRounds[r] = true; });
+    });
+    var roundList = Object.keys(allRounds).sort();
+    if (roundList.length) {
+      html += '<div class="card"><h2>Personal bests by round</h2>' +
+        '<p class="card-note">Best score for each round type, across every discipline it has been shot with.</p>';
+      html += '<div class="table-wide-scroll"><table><thead><tr><th>Round</th>' +
+        disciplinesPresent.map(function (d) { return '<th class="num">' + d + "</th>"; }).join("") +
+        "</tr></thead><tbody>";
+      roundList.forEach(function (round) {
+        html += "<tr><td>" + escapeHtml(round) + "</td>";
+        disciplinesPresent.forEach(function (d) {
+          var pb = pbByRound(entriesByBucket[d])[round];
+          html += '<td class="num">' + (pb ? pb.score : '<span class="status-pending">-</span>') + "</td>";
+        });
+        html += "</tr>";
+      });
+      html += "</tbody></table></div></div>";
+    }
+
+    // 252 practice ladder, cross-discipline.
+    html += '<div class="card"><h2>252 practice ladder</h2>' +
+      '<p class="card-note">Best score logged at each distance for the 252 format, 20 to 100 yards.</p>';
+    html += '<div class="table-wide-scroll"><table><thead><tr><th>Distance</th>' +
+      disciplinesPresent.map(function (d) { return '<th class="num">' + d + "</th>"; }).join("") +
+      "</tr></thead><tbody>";
+    var ladders = {};
+    disciplinesPresent.forEach(function (d) { ladders[d] = ladderStats(entriesByBucket[d]); });
+    LADDER_DISTANCES.forEach(function (dist) {
+      html += "<tr><td>" + dist + "yds</td>";
+      disciplinesPresent.forEach(function (d) {
+        var e = ladders[d][dist];
+        html += '<td class="num">' + (e ? '<span class="status-good">' + e.score + "</span>" : '<span class="status-pending">Not yet</span>') + "</td>";
+      });
+      html += "</tr>";
+    });
+    html += "</tbody></table></div></div>";
+
+    if (specialEntries && specialEntries.length) {
+      html += '<div class="card"><h2>Annual &amp; club shoots</h2><p class="card-note">Entries logged without a specific bow type or round (e.g. Midsummer Madness, Spring Fling).</p>';
+      html += '<div class="table-scroll"><table><thead><tr><th>Date</th><th class="num">Score</th><th>Comment</th></tr></thead><tbody>';
+      specialEntries.slice().sort(function (a, b) { return b.date - a.date; }).forEach(function (e) {
+        html += "<tr><td>" + fmtDate(e.date) + '</td><td class="num">' + (e.score !== null ? e.score : "-") + "</td><td>" +
+          medalBadge(e.comment) + escapeHtml(e.comment) + "</td></tr>";
+      });
+      html += "</tbody></table></div></div>";
+    }
+
+    return html;
+  }
+
+  // ---- App bootstrap -------------------------------------------------------
+  function groupByBucket(entries) {
+    var out = {};
+    entries.forEach(function (e) {
+      if (!out[e.bucket]) out[e.bucket] = [];
+      out[e.bucket].push(e);
+    });
+    return out;
+  }
+
+  function showTab(id) {
+    document.querySelectorAll("nav.tabs button").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.tab === id);
+    });
+    document.querySelectorAll(".panel").forEach(function (p) {
+      p.classList.toggle("active", p.id === "panel-" + id);
+    });
+  }
+
+  function render(entries) {
+    var byBucket = groupByBucket(entries);
+    var special = byBucket["Special"] || [];
+    var other = byBucket["Other"] || [];
+    if (other.length) special = special.concat(other);
+
+    var disciplines = DISCIPLINE_ORDER.filter(function (d) { return byBucket[d] && byBucket[d].length; });
+    lastEntriesByBucket = {};
+    disciplines.forEach(function (d) { lastEntriesByBucket[d] = byBucket[d]; });
+
+    var tabsEl = document.getElementById("tabs");
+    var panelsEl = document.getElementById("panels");
+    var tabDefs = [{ id: "overview", label: "Overview" }].concat(
+      disciplines.map(function (d) { return { id: d.toLowerCase(), label: d }; })
+    );
+
+    tabsEl.innerHTML = tabDefs.map(function (t) {
+      return '<button data-tab="' + t.id + '">' + t.label + "</button>";
+    }).join("");
+    tabsEl.style.display = "flex";
+    tabsEl.querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () { showTab(b.dataset.tab); });
+    });
+
+    var panelsHtml = '<section class="panel" id="panel-overview">' + buildOverviewPanel(lastEntriesByBucket, special) + "</section>";
+    var disciplinePanels = {};
+    disciplines.forEach(function (d) {
+      var built = buildDisciplinePanel(d, byBucket[d]);
+      disciplinePanels[d] = built;
+      panelsHtml += '<section class="panel" id="panel-' + d.toLowerCase() + '">' + built.html + "</section>";
+    });
+    panelsEl.innerHTML = panelsHtml;
+
+    disciplines.forEach(function (d) {
+      renderDisciplineTable(d, byBucket[d], "");
+      var sel = document.getElementById("filter-" + d);
+      if (sel) {
+        sel.addEventListener("change", function () {
+          renderDisciplineTable(d, byBucket[d], sel.value);
+        });
+      }
+    });
+
+    showTab("overview");
+    renderAllCharts();
+
+    var total = entries.length;
+    var latest = entries.length ? entries[entries.length - 1].date : null;
+    document.getElementById("statusLine").textContent =
+      total + " shoots logged" + (latest ? " · latest entry " + fmtDate(latest) : "") + " · loaded " +
+      new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function showError(err, urlTried) {
+    document.getElementById("statusLine").textContent = "Could not load live data.";
+    var box = document.getElementById("loadError");
+    box.style.display = "block";
+    box.innerHTML = '<div class="error-box"><strong>Could not load the spreadsheet.</strong><br>' +
+      escapeHtml(err && err.message ? err.message : String(err)) +
+      '<br><br>Make sure the source sheet is shared as <em>"Anyone with the link can view"</em> (or published to the web via ' +
+      "File &rarr; Share &rarr; Publish to web). Tried: <code>" + escapeHtml(urlTried) + "</code></div>";
+  }
+
+  function fetchCSV(url) {
+    return fetch(url, { cache: "no-store" }).then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status + " fetching sheet data.");
+      return res.text();
+    });
+  }
+
+  // Google's CSV export endpoints don't send permissive CORS headers, so a plain
+  // fetch() from a github.io origin gets blocked by the browser before this code
+  // ever sees a response. The Visualization API's JSON endpoint is designed for
+  // exactly this (embedding a sheet on another domain) and supports a JSONP-style
+  // callback loaded via a <script> tag, which isn't subject to CORS at all.
+  function loadViaJsonp(sheetId, gid, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+      var cbName = "__archeryGvizCb" + Date.now() + Math.floor(Math.random() * 1e6);
+      var script = document.createElement("script");
+      var done = false;
+
+      function cleanup() {
+        clearTimeout(timer);
+        try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        cleanup();
+        reject(new Error("Timed out waiting for the spreadsheet to respond."));
+      }, timeoutMs || 15000);
+
+      window[cbName] = function (response) {
+        if (done) return;
+        done = true;
+        cleanup();
+        if (!response || response.status === "error") {
+          var msg = response && response.errors && response.errors[0] && response.errors[0].detailed_message;
+          reject(new Error(msg || "The spreadsheet returned an error."));
+          return;
+        }
+        resolve(response);
+      };
+
+      script.onerror = function () {
+        if (done) return;
+        done = true;
+        cleanup();
+        reject(new Error("Could not load the spreadsheet script."));
+      };
+
+      script.src = "https://docs.google.com/spreadsheets/d/" + sheetId + "/gviz/tq?gid=" + gid +
+        "&tqx=out:json;responseHandler=" + cbName;
+      document.head.appendChild(script);
+    });
+  }
+
+  // Turn a google.visualization.Query response into the same row-of-strings
+  // shape parseCSV() would produce, so buildEntries() can stay unchanged. Both
+  // the column labels (in case the sheet's header row was auto-detected out of
+  // the data) and the raw data rows are included as candidate rows; buildEntries
+  // already scans for whichever row starts with "Date".
+  function rowsFromGviz(response) {
+    var table = response.table || { cols: [], rows: [] };
+    var cellText = function (cell) {
+      if (!cell) return "";
+      if (cell.f !== undefined && cell.f !== null) return String(cell.f);
+      if (cell.v === undefined || cell.v === null) return "";
+      return String(cell.v);
+    };
+    var headerRow = (table.cols || []).map(function (c) { return c.label || ""; });
+    var dataRows = (table.rows || []).map(function (r) { return (r.c || []).map(cellText); });
+    return [headerRow].concat(dataRows);
+  }
+
+  function loadAndRender() {
+    loadViaJsonp(SHEET_ID, SHEET_GID).then(function (response) {
+      var rows = rowsFromGviz(response);
+      var entries = buildEntries(rows);
+      if (!entries.length) throw new Error("The sheet loaded but no data rows were found.");
+      render(entries);
+    }).catch(function (jsonpErr) {
+      // Fall back to a direct CSV fetch, in case the sheet has been published
+      // to the web (which does send permissive CORS headers for CSV output).
+      fetchCSV(CSV_URL).catch(function () {
+        return fetchCSV(CSV_URL_FALLBACK);
+      }).then(function (text) {
+        var rows = parseCSV(text);
+        var entries = buildEntries(rows);
+        if (!entries.length) throw new Error("The sheet loaded but no data rows were found.");
+        render(entries);
+      }).catch(function () {
+        showError(jsonpErr, CSV_URL);
+      });
+    });
+  }
+
+  loadAndRender();
+
+  window.addEventListener("resize", function () {
+    // Chart.js handles responsive resize itself; nothing extra needed.
+  });
+})();
+</script>
+</body>
+</html>
