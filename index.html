@@ -406,14 +406,30 @@
     };
   }
 
-  // The 252 badge for a distance is earned only once an archer has scored
-  // 252 or more on at least two separate attempts at that distance (not just
-  // logged an attempt).
-  var LADDER_BADGE_SCORE = 252;
+  // The 252 badge for a distance is earned only once an archer has scored at
+  // or above the qualifying score for that discipline and distance, on at
+  // least two separate attempts (not just logged an attempt). The name "252"
+  // is just the round's name - the actual qualifying score is set per bow
+  // type and gets lower at the longer distances.
+  var LADDER_BADGE_SCORE = {
+    Recurve:  { 20: 252, 30: 252, 40: 252, 50: 252, 60: 252, 80: 252, 100: 252 },
+    Compound: { 20: 280, 30: 280, 40: 280, 50: 280, 60: 280, 80: 280, 100: 280 },
+    Longbow:  { 20: 164, 30: 164, 40: 164, 50: 100, 60: 100, 80: 80,  100: 80 },
+    Barebow:  { 20: 189, 30: 189, 40: 189, 50: 189, 60: 189, 80: 164, 100: 139 }
+  };
+  var LADDER_BADGE_DEFAULT = 252; // fallback for a bow type not in the table above
   var LADDER_BADGE_COUNT = 2;
 
-  // Best score and qualifying-attempt count at each 252-ladder distance, keyed by distance in yards.
-  function ladderStats(entries) {
+  function ladderBadgeScore(discipline, dist) {
+    var table = LADDER_BADGE_SCORE[discipline];
+    if (table && table[dist] !== undefined) return table[dist];
+    return LADDER_BADGE_DEFAULT;
+  }
+
+  // Best score and qualifying-attempt count at each 252-ladder distance for one
+  // discipline, keyed by distance in yards. The qualifying score depends on
+  // both the discipline and the distance, so both are needed here.
+  function ladderStats(entries, discipline) {
     var byDist = {};
     entries.forEach(function (e) {
       var m = LADDER_RE.exec(e.round);
@@ -421,7 +437,7 @@
       var d = Number(m[1]);
       if (!byDist[d]) byDist[d] = { best: e, qualifying: 0 };
       else if (e.score > byDist[d].best.score) byDist[d].best = e;
-      if (e.score >= LADDER_BADGE_SCORE) byDist[d].qualifying++;
+      if (e.score >= ladderBadgeScore(discipline, d)) byDist[d].qualifying++;
     });
     return byDist;
   }
@@ -705,24 +721,25 @@
 
     // 252 practice ladder, cross-discipline.
     html += '<div class="card"><h2>252 practice ladder</h2>' +
-      '<p class="card-note">Badge earned once a score of ' + LADDER_BADGE_SCORE + ' or more has been shot at that distance on ' +
-      LADDER_BADGE_COUNT + ' separate occasions. Best score shown per distance.</p>';
+      '<p class="card-note">Badge earned once the qualifying score for that bow type and distance has been shot on ' +
+      LADDER_BADGE_COUNT + ' separate occasions. Score shown as best / qualifying score.</p>';
     html += '<div class="table-wide-scroll"><table><thead><tr><th>Distance</th>' +
       disciplinesPresent.map(function (d) { return '<th class="num">' + d + "</th>"; }).join("") +
       "</tr></thead><tbody>";
     var ladders = {};
-    disciplinesPresent.forEach(function (d) { ladders[d] = ladderStats(entriesByBucket[d]); });
+    disciplinesPresent.forEach(function (d) { ladders[d] = ladderStats(entriesByBucket[d], d); });
     LADDER_DISTANCES.forEach(function (dist) {
       html += "<tr><td>" + dist + "yds</td>";
       disciplinesPresent.forEach(function (d) {
         var stat = ladders[d][dist];
+        var threshold = ladderBadgeScore(d, dist);
         var cell;
         if (!stat) {
-          cell = '<span class="status-pending">Not yet</span>';
+          cell = '<span class="status-pending">0/' + threshold + ' &middot; Not yet</span>';
         } else if (stat.qualifying >= LADDER_BADGE_COUNT) {
-          cell = '<span class="status-good">' + stat.best.score + ' &middot; Done</span>';
+          cell = '<span class="status-good">' + stat.best.score + '/' + threshold + ' &middot; Done</span>';
         } else {
-          cell = '<span class="status-warn">' + stat.best.score + ' &middot; ' + stat.qualifying + " of " + LADDER_BADGE_COUNT + "</span>";
+          cell = '<span class="status-warn">' + stat.best.score + '/' + threshold + ' &middot; ' + stat.qualifying + " of " + LADDER_BADGE_COUNT + "</span>";
         }
         html += '<td class="num">' + cell + "</td>";
       });
