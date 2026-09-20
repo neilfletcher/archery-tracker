@@ -296,45 +296,56 @@
     return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   }
 
-  // ---- Turn raw CSV rows into entries ----------------------------------
-  function buildEntries(rows) {
-    var headerIdx = -1;
-    for (var i = 0; i < rows.length; i++) {
-      if ((rows[i][0] || "").trim() === "Date") { headerIdx = i; break; }
-    }
-    if (headerIdx === -1) throw new Error("Could not find the header row (expected a 'Date' column).");
+  // ---- Turn raw rows (from either CSV text or the gviz JSON table) into entries ----
+  // Column positions are fixed by the sheet's layout: 0 Date, 1 Category, 2 Bow Type,
+  // 3 Round, 4 Score, 5 Classification, 6 Handicap rating for round, 7 New Handicap,
+  // 8 Handicap round allowance, 9 Handicap adjusted score, 10 Awards / comments.
+  //
+  // Rather than hunting for a literal header row, every row is validated on its own:
+  // a real shoot is one whose first cell parses as a "DD-Mon-YYYY" date. Everything
+  // else (the "Name:" row, a literal header-text row if one is present, blank/#REF!
+  // spacer rows) fails that check and is skipped automatically. This matters because
+  // the two data sources disagree about whether a header row even appears in the data:
+  // Google's gviz JSON endpoint merges this sheet's two header-ish rows into synthetic
+  // column labels and excludes them from the row data entirely, so a plain-CSV-style
+  // search for a row starting with "Date" finds nothing there, while the CSV export
+  // keeps the literal header text as an ordinary (and here, self-rejecting) row.
+  function entryFromRow(row) {
+    var dateStr = (row[0] || "").trim();
+    if (!dateStr) return null; // spacer / #REF! junk row
+    var date = parseDate(dateStr);
+    if (!date) return null; // not a data row (metadata, header text, etc.)
 
+    var category = (row[1] || "").trim();
+    var bowType = (row[2] || "").trim();
+    var round = (row[3] || "").trim();
+    var score = num(row[4]);
+    var classification = cls(row[5]);
+    var handicapRating = num(row[6]);
+    var newHandicap = num(row[7]);
+    var handicapAllowance = num(row[8]);
+    var handicapAdjustedScore = num(row[9]);
+    var comment = (row[10] || "").trim();
+
+    var bucket;
+    if (bowType) bucket = bowType;
+    else if (!round) bucket = "Special";
+    else bucket = "Other";
+
+    return {
+      date: date, dateStr: dateStr, category: category, bowType: bowType, bucket: bucket,
+      round: round, score: score, classification: classification,
+      handicapRating: handicapRating, newHandicap: newHandicap,
+      handicapAllowance: handicapAllowance, handicapAdjustedScore: handicapAdjustedScore,
+      comment: comment
+    };
+  }
+
+  function buildEntriesFromRows(rows) {
     var entries = [];
-    for (var r = headerIdx + 1; r < rows.length; r++) {
-      var row = rows[r];
-      var dateStr = (row[0] || "").trim();
-      if (!dateStr) continue; // spacer / #REF! junk row
-      var date = parseDate(dateStr);
-      if (!date) continue;
-
-      var category = (row[1] || "").trim();
-      var bowType = (row[2] || "").trim();
-      var round = (row[3] || "").trim();
-      var score = num(row[4]);
-      var classification = cls(row[5]);
-      var handicapRating = num(row[6]);
-      var newHandicap = num(row[7]);
-      var handicapAllowance = num(row[8]);
-      var handicapAdjustedScore = num(row[9]);
-      var comment = (row[10] || "").trim();
-
-      var bucket;
-      if (bowType) bucket = bowType;
-      else if (!round) bucket = "Special";
-      else bucket = "Other";
-
-      entries.push({
-        date: date, dateStr: dateStr, category: category, bowType: bowType, bucket: bucket,
-        round: round, score: score, classification: classification,
-        handicapRating: handicapRating, newHandicap: newHandicap,
-        handicapAllowance: handicapAllowance, handicapAdjustedScore: handicapAdjustedScore,
-        comment: comment
-      });
+    for (var r = 0; r < rows.length; r++) {
+      var e = entryFromRow(rows[r]);
+      if (e) entries.push(e);
     }
     entries.sort(function (a, b) { return a.date - b.date; });
     return entries;
@@ -833,11 +844,12 @@
     });
   }
 
-  // Turn a google.visualization.Query response into the same row-of-strings
-  // shape parseCSV() would produce, so buildEntries() can stay unchanged. Both
-  // the column labels (in case the sheet's header row was auto-detected out of
-  // the data) and the raw data rows are included as candidate rows; buildEntries
-  // already scans for whichever row starts with "Date".
+  // Turn a google.visualization.Query response into row-of-strings arrays, using
+  // the formatted display value (.f) where available so dates/numbers read the
+  // same way the sheet displays them. table.cols is deliberately ignored: this
+  // sheet's two header-ish rows get merged into synthetic column labels there
+  // (e.g. "Name: Date", "Neil Fletcher Category") and excluded from table.rows
+  // altogether, so real data starts at rows[0] with no header row to strip.
   function rowsFromGviz(response) {
     var table = response.table || { cols: [], rows: [] };
     var cellText = function (cell) {
@@ -846,15 +858,13 @@
       if (cell.v === undefined || cell.v === null) return "";
       return String(cell.v);
     };
-    var headerRow = (table.cols || []).map(function (c) { return c.label || ""; });
-    var dataRows = (table.rows || []).map(function (r) { return (r.c || []).map(cellText); });
-    return [headerRow].concat(dataRows);
+    return (table.rows || []).map(function (r) { return (r.c || []).map(cellText); });
   }
 
   function loadAndRender() {
     loadViaJsonp(SHEET_ID, SHEET_GID).then(function (response) {
       var rows = rowsFromGviz(response);
-      var entries = buildEntries(rows);
+      var entries = buildEntriesFromRows(rows);
       if (!entries.length) throw new Error("The sheet loaded but no data rows were found.");
       render(entries);
     }).catch(function (jsonpErr) {
@@ -864,7 +874,7 @@
         return fetchCSV(CSV_URL_FALLBACK);
       }).then(function (text) {
         var rows = parseCSV(text);
-        var entries = buildEntries(rows);
+        var entries = buildEntriesFromRows(rows);
         if (!entries.length) throw new Error("The sheet loaded but no data rows were found.");
         render(entries);
       }).catch(function () {
