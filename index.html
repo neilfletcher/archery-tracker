@@ -19,6 +19,7 @@
     --border:         rgba(11,11,11,0.10);
     --card-border:    rgba(11,11,11,0.08);
     --success-text:   #006300;
+    --warning-text:   #8a5c00;
 
     --recurve:   #2a78d6;
     --barebow:   #eb6834;
@@ -39,6 +40,7 @@
       --border:         rgba(255,255,255,0.10);
       --card-border:    rgba(255,255,255,0.10);
       --success-text:   #0ca30c;
+      --warning-text:   #e0a030;
 
       --recurve:   #3987e5;
       --barebow:   #d95926;
@@ -59,6 +61,7 @@
     --border:         rgba(255,255,255,0.10);
     --card-border:    rgba(255,255,255,0.10);
     --success-text:   #0ca30c;
+    --warning-text:   #e0a030;
 
     --recurve:   #3987e5;
     --barebow:   #d95926;
@@ -152,6 +155,7 @@
   .badge.rec { background: var(--recurve); }
 
   .status-good { color: var(--success-text); font-weight: 600; }
+  .status-warn { color: var(--warning-text); font-weight: 600; }
   .status-pending { color: var(--text-muted); }
 
   select, input[type=text] {
@@ -402,14 +406,22 @@
     };
   }
 
-  // Best score at each 252-ladder distance, keyed by distance in yards.
+  // The 252 badge for a distance is earned only once an archer has scored
+  // 252 or more on at least two separate attempts at that distance (not just
+  // logged an attempt).
+  var LADDER_BADGE_SCORE = 252;
+  var LADDER_BADGE_COUNT = 2;
+
+  // Best score and qualifying-attempt count at each 252-ladder distance, keyed by distance in yards.
   function ladderStats(entries) {
     var byDist = {};
     entries.forEach(function (e) {
       var m = LADDER_RE.exec(e.round);
       if (!m || e.score === null) return;
       var d = Number(m[1]);
-      if (!byDist[d] || e.score > byDist[d].score) byDist[d] = e;
+      if (!byDist[d]) byDist[d] = { best: e, qualifying: 0 };
+      else if (e.score > byDist[d].best.score) byDist[d].best = e;
+      if (e.score >= LADDER_BADGE_SCORE) byDist[d].qualifying++;
     });
     return byDist;
   }
@@ -693,7 +705,8 @@
 
     // 252 practice ladder, cross-discipline.
     html += '<div class="card"><h2>252 practice ladder</h2>' +
-      '<p class="card-note">Best score logged at each distance for the 252 format, 20 to 100 yards.</p>';
+      '<p class="card-note">Badge earned once a score of ' + LADDER_BADGE_SCORE + ' or more has been shot at that distance on ' +
+      LADDER_BADGE_COUNT + ' separate occasions. Best score shown per distance.</p>';
     html += '<div class="table-wide-scroll"><table><thead><tr><th>Distance</th>' +
       disciplinesPresent.map(function (d) { return '<th class="num">' + d + "</th>"; }).join("") +
       "</tr></thead><tbody>";
@@ -702,8 +715,16 @@
     LADDER_DISTANCES.forEach(function (dist) {
       html += "<tr><td>" + dist + "yds</td>";
       disciplinesPresent.forEach(function (d) {
-        var e = ladders[d][dist];
-        html += '<td class="num">' + (e ? '<span class="status-good">' + e.score + "</span>" : '<span class="status-pending">Not yet</span>') + "</td>";
+        var stat = ladders[d][dist];
+        var cell;
+        if (!stat) {
+          cell = '<span class="status-pending">Not yet</span>';
+        } else if (stat.qualifying >= LADDER_BADGE_COUNT) {
+          cell = '<span class="status-good">' + stat.best.score + ' &middot; Done</span>';
+        } else {
+          cell = '<span class="status-warn">' + stat.best.score + ' &middot; ' + stat.qualifying + " of " + LADDER_BADGE_COUNT + "</span>";
+        }
+        html += '<td class="num">' + cell + "</td>";
       });
       html += "</tr>";
     });
