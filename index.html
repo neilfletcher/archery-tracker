@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neil Fletcher: Archery Tracker</title>
 <meta name="description" content="Live archery progress tracker, pulled from Neil Fletcher's competition and practice log.">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
   :root {
     color-scheme: light;
@@ -823,8 +823,12 @@
         reject(new Error("Could not load the spreadsheet script."));
       };
 
+      // Google's tqx parser only honours responseHandler when it comes before
+      // out:json in this list; reversed, it silently falls back to the default
+      // google.visualization.Query.setResponse(...) wrapper (confirmed against
+      // the live endpoint).
       script.src = "https://docs.google.com/spreadsheets/d/" + sheetId + "/gviz/tq?gid=" + gid +
-        "&tqx=out:json;responseHandler=" + cbName;
+        "&tqx=responseHandler:" + cbName + ";out:json";
       document.head.appendChild(script);
     });
   }
