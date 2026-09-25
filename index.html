@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-JF54HQGVLT"></script>
@@ -11,8 +11,22 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neil Fletcher: Archery Tracker</title>
-<meta name="description" content="Live archery progress tracker, pulled from Neil Fletcher's competition and practice log.">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<meta name="description" content="Live archery progress tracker: handicaps, Archery GB classifications, personal bests and kit, pulled from Neil Fletcher's competition and practice log.">
+<link rel="canonical" href="https://neilfletcher.github.io/archery-tracker/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Neil Fletcher">
+<meta property="og:title" content="Archery Tracker: Neil Fletcher">
+<meta property="og:description" content="Handicap progression, Archery GB classifications, personal bests and kit across recurve, barebow, compound and longbow.">
+<meta property="og:url" content="https://neilfletcher.github.io/archery-tracker/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Archery Tracker: Neil Fletcher">
+<meta name="twitter:description" content="Handicap progression, Archery GB classifications, personal bests and kit.">
+<meta name="theme-color" content="#f9f9f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23ffffff' stroke='%23222' stroke-width='1'/%3E%3Ccircle cx='16' cy='16' r='12' fill='%23222'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%232a78d6'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23e5322d'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23f5c518'/%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js"></script>
+<!-- AGB 2023 handicap tables and classification thresholds, generated from archeryutils (see agb-data.js header). -->
+<script src="agb-data.js"></script>
 <style>
   :root {
     color-scheme: light;
@@ -20,13 +34,14 @@
     --page-plane:     #f9f9f7;
     --text-primary:   #0b0b0b;
     --text-secondary: #52514e;
-    --text-muted:     #898781;
+    --text-muted:     #6f6e69;
     --gridline:       #e1e0d9;
     --baseline:       #c3c2b7;
     --border:         rgba(11,11,11,0.10);
     --card-border:    rgba(11,11,11,0.08);
     --success-text:   #006300;
     --warning-text:   #8a5c00;
+    --focus:          #2a78d6;
 
     --recurve:   #2a78d6;
     --barebow:   #eb6834;
@@ -41,13 +56,14 @@
       --page-plane:     #0d0d0d;
       --text-primary:   #ffffff;
       --text-secondary: #c3c2b7;
-      --text-muted:     #898781;
+      --text-muted:     #9a9891;
       --gridline:       #2c2c2a;
-      --baseline:       #383835;
+      --baseline:       #4a4a46;
       --border:         rgba(255,255,255,0.10);
       --card-border:    rgba(255,255,255,0.10);
-      --success-text:   #0ca30c;
+      --success-text:   #3cc03c;
       --warning-text:   #e0a030;
+      --focus:          #6aa7f0;
 
       --recurve:   #3987e5;
       --barebow:   #d95926;
@@ -62,13 +78,14 @@
     --page-plane:     #0d0d0d;
     --text-primary:   #ffffff;
     --text-secondary: #c3c2b7;
-    --text-muted:     #898781;
+    --text-muted:     #9a9891;
     --gridline:       #2c2c2a;
-    --baseline:       #383835;
+    --baseline:       #4a4a46;
     --border:         rgba(255,255,255,0.10);
     --card-border:    rgba(255,255,255,0.10);
-    --success-text:   #0ca30c;
+    --success-text:   #3cc03c;
     --warning-text:   #e0a030;
+    --focus:          #6aa7f0;
 
     --recurve:   #3987e5;
     --barebow:   #d95926;
@@ -85,22 +102,26 @@
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 64px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
   header.page-head {
     display: flex; justify-content: space-between; align-items: flex-start;
-    gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
   }
   h1 { font-size: 1.5rem; margin: 0 0 4px; }
   .sub { color: var(--text-secondary); font-size: 0.92rem; margin: 0; }
   .status-line { color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }
+  .status-line.warn { color: var(--warning-text); }
+  .head-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-  button.theme-toggle {
+  button.btn {
     background: var(--surface-1); color: var(--text-primary);
     border: 1px solid var(--border); border-radius: 8px;
-    padding: 8px 12px; font-size: 0.82rem; cursor: pointer;
+    padding: 8px 12px; font: inherit; font-size: 0.82rem; cursor: pointer;
   }
-  button.theme-toggle:hover { background: var(--page-plane); }
+  button.btn:hover { background: var(--page-plane); }
 
   nav.tabs {
     display: flex; gap: 6px; flex-wrap: wrap;
@@ -113,77 +134,107 @@
     color: var(--text-secondary); padding: 10px 14px;
     border-bottom: 2px solid transparent; margin-bottom: -1px;
   }
-  nav.tabs button.active { color: var(--text-primary); border-bottom-color: var(--dot, var(--text-primary)); }
+  nav.tabs button[aria-selected="true"] { color: var(--text-primary); border-bottom-color: var(--dot, var(--text-primary)); }
   nav.tabs button:hover { color: var(--text-primary); }
+  nav.tabs .tab-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
 
-  .panel { display: none; }
-  .panel.active { display: block; }
+  .panel[hidden] { display: none; }
 
   .card {
     background: var(--surface-1); border: 1px solid var(--card-border);
     border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
   }
   .card h2 { font-size: 1.02rem; margin: 0 0 4px; }
-  .card h3 { font-size: 0.92rem; margin: 0 0 10px; color: var(--text-secondary); font-weight: 600; }
-  .card-note { color: var(--text-muted); font-size: 0.78rem; margin: 2px 0 14px; }
+  .card h3 { font-size: 0.92rem; margin: 16px 0 8px; color: var(--text-secondary); font-weight: 600; }
+  .card h3:first-of-type { margin-top: 8px; }
+  .card-note { color: var(--text-muted); font-size: 0.78rem; margin: 2px 0 14px; line-height: 1.45; }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
 
-  .tile-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .tile-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
   .tile {
     background: var(--surface-1); border: 1px solid var(--card-border);
-    border-radius: 12px; padding: 14px 16px;
+    border-radius: 12px; padding: 14px 16px; min-width: 0;
   }
   .tile .label { font-size: 0.74rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.02em; }
-  .tile .value { font-size: 1.3rem; font-weight: 600; line-height: 1.25; }
-  .tile .value small { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-secondary); margin-top: 2px; }
-  .tile .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .tile .value { font-size: 1.25rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+  .tile .value small { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-secondary); margin-top: 3px; line-height: 1.35; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 2px; }
 
-  .chart-box { position: relative; height: 280px; margin-bottom: 4px; }
+  .chart-box { position: relative; height: 300px; margin-bottom: 4px; }
+  .chart-box.short { height: 220px; }
   .chart-legend-note { color: var(--text-muted); font-size: 0.76rem; margin-top: 8px; }
 
   table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
   thead th {
     text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em;
     color: var(--text-muted); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--gridline);
-    position: sticky; top: 0; background: var(--surface-1);
+    position: sticky; top: 0; background: var(--surface-1); white-space: nowrap;
   }
   tbody td { padding: 7px 10px; border-bottom: 1px solid var(--gridline); vertical-align: top; }
   tbody tr:last-child td { border-bottom: none; }
   td.num, th.num { font-variant-numeric: tabular-nums; text-align: right; }
-  .table-scroll { max-height: 420px; overflow-y: auto; border: 1px solid var(--gridline); border-radius: 8px; }
+  td.nowrap { white-space: nowrap; }
+  .table-scroll { max-height: 420px; overflow: auto; border: 1px solid var(--gridline); border-radius: 8px; }
   .table-wide-scroll { overflow-x: auto; }
+  .muted { color: var(--text-muted); }
+  .small { font-size: 0.76rem; }
 
   .badge {
     display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em;
-    padding: 2px 6px; border-radius: 4px; margin-right: 6px; color: #fff;
+    padding: 2px 6px; border-radius: 4px; margin-right: 6px; color: #fff; white-space: nowrap;
   }
-  .badge.p1 { background: #9a7a12; }
-  .badge.p2 { background: #6d6d6d; }
-  .badge.p3 { background: #8a5a34; }
-  .badge.rec { background: var(--recurve); }
+  .badge.p1 { background: #7a5f0a; }
+  .badge.p2 { background: #626262; }
+  .badge.p3 { background: #87552e; }
+  .badge.pn { background: transparent; color: var(--text-secondary); border: 1px solid var(--baseline); }
+  .badge.rs { background: transparent; color: var(--text-secondary); border: 1px solid var(--baseline); }
+  .pill { display: inline-block; font-size: 0.7rem; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--baseline); color: var(--text-secondary); white-space: nowrap; }
 
   .status-good { color: var(--success-text); font-weight: 600; }
   .status-warn { color: var(--warning-text); font-weight: 600; }
   .status-pending { color: var(--text-muted); }
 
-  select, input[type=text] {
+  select, input[type=text], input[type=number] {
     font-family: inherit; font-size: 0.82rem; padding: 6px 10px;
     border: 1px solid var(--border); border-radius: 8px;
     background: var(--surface-1); color: var(--text-primary);
   }
+  input[type=number] { width: 76px; }
+  label.ctl { font-size: 0.82rem; color: var(--text-secondary); display: inline-flex; gap: 6px; align-items: center; }
   .controls-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    background: var(--surface-1); color: var(--text-secondary); border: none; font: inherit;
+    font-size: 0.8rem; padding: 6px 12px; cursor: pointer; border-right: 1px solid var(--border);
+  }
+  .seg button:last-child { border-right: none; }
+  .seg button[aria-pressed="true"] { background: var(--page-plane); color: var(--text-primary); font-weight: 600; }
+
+  .next-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .next-summary { font-size: 0.88rem; color: var(--text-secondary); margin: 0 0 10px; line-height: 1.5; }
+  .next-summary strong { color: var(--text-primary); }
+
+  .kit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+  .kit-grid .card { margin-bottom: 0; }
+  dl.kit { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 8px 0 0; font-size: 0.86rem; }
+  dl.kit dt { color: var(--text-muted); }
+  dl.kit dd { margin: 0; }
 
   .error-box {
     background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
     padding: 20px; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5;
   }
-  .error-box code { background: var(--page-plane); padding: 1px 5px; border-radius: 4px; font-size: 0.82rem; }
+  .error-box code { background: var(--page-plane); padding: 1px 5px; border-radius: 4px; font-size: 0.82rem; overflow-wrap: anywhere; }
 
-  footer { color: var(--text-muted); font-size: 0.78rem; margin-top: 32px; text-align: center; }
-  footer a { color: var(--text-secondary); }
+  footer { color: var(--text-muted); font-size: 0.78rem; margin-top: 32px; text-align: center; line-height: 1.6; }
+  footer a, .card-note a { color: var(--text-secondary); }
 
   @media (max-width: 560px) {
     .tile-row { grid-template-columns: repeat(2, 1fr); }
     nav.tabs button { padding: 8px 10px; font-size: 0.82rem; }
+    .card { padding: 16px 14px; }
+    .chart-box { height: 260px; }
   }
 </style>
 </head>
@@ -194,19 +245,25 @@
     <div>
       <h1>Archery Tracker</h1>
       <p class="sub">Neil Fletcher: competition and practice log</p>
-      <p class="status-line" id="statusLine">Loading live data…</p>
+      <p class="status-line" id="statusLine" role="status">Loading live data…</p>
     </div>
-    <button class="theme-toggle" id="themeToggle" type="button">Toggle theme</button>
+    <div class="head-controls">
+      <label class="ctl" for="seasonSelect">Show
+        <select id="seasonSelect"><option value="all">All time</option></select>
+      </label>
+      <button class="btn" id="themeToggle" type="button">Dark theme</button>
+    </div>
   </header>
 
-  <nav class="tabs" id="tabs" style="display:none;"></nav>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Sections" hidden></nav>
   <div id="panels"></div>
 
-  <div id="loadError" style="display:none;"></div>
+  <div id="loadError" hidden></div>
 
   <footer>
-    Data pulled live from <a id="sourceLink" href="#" target="_blank" rel="noopener">the source spreadsheet</a>
-    on each page load. Handicap: lower is better (chart axis is inverted so an upward line means improvement).
+    Data pulled live from <a id="sourceLink" href="#" target="_blank" rel="noopener">the source spreadsheet</a> on each visit; the last good copy is kept in your browser so the page still works offline.<br>
+    Handicaps use the Archery GB 2023 scheme: lower is better, so handicap chart axes are inverted and an upward line means improvement.
+    Classification scores come from <a href="https://github.com/jatkinson1000/archery-utils" target="_blank" rel="noopener">archeryutils</a> and may occasionally differ by a point from the official tables.
   </footer>
 
 </div>
@@ -215,90 +272,125 @@
 (function () {
   "use strict";
 
-  // ---- Configuration -------------------------------------------------
-  var SHEET_ID = "1cm0klFvQPp5hMvOrENk2EhT7aoNs9P7o";
-  var SHEET_GID = "1759126703";
-  var CSV_URL = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&gid=" + SHEET_GID;
-  var CSV_URL_FALLBACK = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/export?format=csv&gid=" + SHEET_GID;
-  var SOURCE_VIEW_URL = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/edit?gid=" + SHEET_GID;
+  // =====================================================================
+  // Configuration
+  // =====================================================================
+  const SHEET_ID = "1cm0klFvQPp5hMvOrENk2EhT7aoNs9P7o";
+  const SHEET_GID = "1759126703";
+  const SOURCE_VIEW_URL = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/edit?gid=" + SHEET_GID;
+
+  // Optional kit sheet. Add a tab to the same spreadsheet with these columns:
+  //   A: Bow Type (Recurve / Barebow / Compound / Longbow)
+  //   B: Section  ("Setup" or "Sight mark")
+  //   C: Item     (e.g. "Limbs", or a distance such as "30yds" / "18m")
+  //   D: Value    (e.g. "W&W NS-G 38lb", or the sight mark such as "4.5")
+  //   E: Notes    (optional)
+  // then paste that tab's gid (the number after "gid=" in its URL) here.
+  // Until then the page falls back to KIT_DEFAULT below.
+  const KIT_SHEET_GID = "";
+
+  const KIT_DEFAULT = {
+    Recurve: {
+      setup: [
+        ["Limbs", "W&W NS-G, 38lb"],
+        ["Draw length", "28\""],
+        ["Arrows", "Easton A/C/E, 560 spine"]
+      ],
+      sightMarks: []
+    },
+    Barebow: {
+      setup: [
+        ["Limbs", "Uukha, 34lb"],
+        ["Draw length", "28\""],
+        ["Arrows", "Easton A/C/E, 620 spine, 29.5\""],
+        ["Points", "100gr"]
+      ],
+      sightMarks: []
+    }
+  };
+
+  // Default target handicap per bow type (shown as a line on the charts and a
+  // row in "What do I need next?"). Viewers can override it on the page.
+  const DEFAULT_GOALS = {};
+
+  const SPINE_FINDER_URL = "https://neilfletcher.github.io/spine-finder/";
+
+  const DISCIPLINE_ORDER = ["Recurve", "Barebow", "Compound", "Longbow"];
+  const DISCIPLINE_COLOR = { Recurve: "--recurve", Barebow: "--barebow", Compound: "--compound", Longbow: "--longbow" };
+
+  // Classification names as the sheet writes them, weakest first.
+  const OUTDOOR_ORDER = ["Archer 3rd Class", "Archer 2nd Class", "Archer 1st Class", "Bowman 3rd Class", "Bowman 2nd Class", "Bowman 1st Class", "Master Bowman", "Grand Master Bowman", "Elite Master Bowman"];
+  const INDOOR_ORDER = ["Indoor Archer 3rd Class", "Indoor Archer 2nd Class", "Indoor Archer 1st Class", "Indoor Bowman 3rd Class", "Indoor Bowman 2nd Class", "Indoor Bowman 1st Class", "Indoor Master Bowman", "Indoor Grand Master Bowman"];
+  const OUTDOOR_SHORT = ["A3", "A2", "A1", "B3", "B2", "B1", "MB", "GMB", "EMB"];
+  const INDOOR_SHORT = ["I-A3", "I-A2", "I-A1", "I-B3", "I-B2", "I-B1", "I-MB", "I-GMB"];
+  const ORDER = { outdoor: OUTDOOR_ORDER, indoor: INDOOR_ORDER };
+  const SHORT = { outdoor: OUTDOOR_SHORT, indoor: INDOOR_SHORT };
+
+  const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+  const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  // The "252" practice ladder: a fixed round shot at increasing distances.
+  const LADDER_DISTANCES = [20, 30, 40, 50, 60, 80, 100];
+  const LADDER_RE = /^252 attempt at (\d+)\s*yds?$/i;
+  // A 252 badge at a distance is earned once the qualifying score for that bow
+  // type and distance has been shot on LADDER_BADGE_COUNT separate occasions.
+  const LADDER_BADGE_SCORE = {
+    Recurve:  { 20: 252, 30: 252, 40: 252, 50: 252, 60: 252, 80: 252, 100: 252 },
+    Compound: { 20: 280, 30: 280, 40: 280, 50: 280, 60: 280, 80: 280, 100: 280 },
+    Longbow:  { 20: 164, 30: 164, 40: 164, 50: 100, 60: 100, 80: 80,  100: 80 },
+    Barebow:  { 20: 189, 30: 189, 40: 189, 50: 189, 60: 189, 80: 164, 100: 139 }
+  };
+  const LADDER_BADGE_DEFAULT = 252;
+  const LADDER_BADGE_COUNT = 2;
+
+  const STORAGE = {
+    theme: "archery-theme",
+    cache: "archery-tracker:rows:v1",
+    goal: "archery-tracker:goal:"
+  };
+
   document.getElementById("sourceLink").href = SOURCE_VIEW_URL;
 
-  var DISCIPLINE_ORDER = ["Recurve", "Barebow", "Compound", "Longbow"];
-  var DISCIPLINE_COLOR = {
-    Recurve: "--recurve", Barebow: "--barebow", Compound: "--compound", Longbow: "--longbow"
-  };
-  var OUTDOOR_ORDER = ["Archer 3rd Class","Archer 2nd Class","Archer 1st Class","Bowman 3rd Class","Bowman 2nd Class","Bowman 1st Class","Master Bowman","Grand Master Bowman"];
-  var INDOOR_ORDER  = ["Indoor Archer 3rd Class","Indoor Archer 2nd Class","Indoor Archer 1st Class","Indoor Bowman 3rd Class","Indoor Bowman 2nd Class","Indoor Bowman 1st Class","Indoor Master Bowman","Indoor Grand Master Bowman"];
-
-  var MONTHS = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
-
-  // The "252" practice ladder: a fixed target shot at increasing distances.
-  var LADDER_DISTANCES = [20, 30, 40, 50, 60, 80, 100];
-  var LADDER_RE = /^252 attempt at (\d+)\s*yds$/i;
-
-  // ---- Theme toggle ----------------------------------------------------
-  (function themeInit() {
-    var saved = null;
-    try { saved = localStorage.getItem("archery-theme"); } catch (e) {}
-    if (saved) document.documentElement.setAttribute("data-theme", saved);
-    document.getElementById("themeToggle").addEventListener("click", function () {
-      var cur = document.documentElement.getAttribute("data-theme");
-      var next = cur === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", next);
-      try { localStorage.setItem("archery-theme", next); } catch (e) {}
-      renderAllCharts();
-    });
-  })();
+  // =====================================================================
+  // Small utilities
+  // =====================================================================
+  function store(key, value) {
+    try {
+      if (value === undefined) return localStorage.getItem(key);
+      if (value === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    } catch (e) { /* storage unavailable: private mode etc. */ }
+    return null;
+  }
 
   function cssVar(name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
-  // ---- CSV parsing (RFC4180-ish, handles quoted multi-line fields) ----
-  function parseCSV(text) {
-    var rows = [], row = [], field = "", inQuotes = false;
-    for (var i = 0; i < text.length; i++) {
-      var c = text[i];
-      if (inQuotes) {
-        if (c === '"') {
-          if (text[i + 1] === '"') { field += '"'; i++; }
-          else { inQuotes = false; }
-        } else {
-          field += c;
-        }
-      } else {
-        if (c === '"') { inQuotes = true; }
-        else if (c === ",") { row.push(field); field = ""; }
-        else if (c === "\r") { /* skip */ }
-        else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
-        else { field += c; }
-      }
-    }
-    if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
-    return rows;
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
   }
 
   function parseDate(s) {
-    if (!s) return null;
-    var m = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(s.trim());
+    const m = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(String(s || "").trim());
     if (!m) return null;
-    var month = MONTHS[m[2]];
+    const month = MONTHS[m[2].charAt(0).toUpperCase() + m[2].slice(1).toLowerCase()];
     if (month === undefined) return null;
     return new Date(Number(m[3]), month, Number(m[1]));
   }
 
   function num(v) {
-    if (v === undefined || v === null) return null;
-    var s = String(v).trim();
-    if (s === "" || s === "#N/A" || s === "#REF!" || s === "#VALUE!") return null;
-    var n = parseFloat(s.replace(/,/g, ""));
+    const s = String(v == null ? "" : v).trim();
+    if (s === "" || s.charAt(0) === "#") return null;
+    const n = parseFloat(s.replace(/,/g, ""));
     return isFinite(n) ? n : null;
   }
 
-  function cls(v) {
-    if (!v) return null;
-    var s = String(v).trim();
-    if (s === "" || s === "#N/A" || s === "#REF!" || s === "#VALUE!") return null;
+  function cleanText(v) {
+    const s = String(v == null ? "" : v).trim();
+    if (s === "" || s.charAt(0) === "#") return null;
     return s;
   }
 
@@ -307,660 +399,1446 @@
     return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   }
 
-  // ---- Turn raw rows (from either CSV text or the gviz JSON table) into entries ----
-  // Column positions are fixed by the sheet's layout: 0 Date, 1 Category, 2 Bow Type,
-  // 3 Round, 4 Score, 5 Classification, 6 Handicap rating for round, 7 New Handicap,
-  // 8 Handicap round allowance, 9 Handicap adjusted score, 10 Awards / comments.
-  //
-  // Rather than hunting for a literal header row, every row is validated on its own:
-  // a real shoot is one whose first cell parses as a "DD-Mon-YYYY" date. Everything
-  // else (the "Name:" row, a literal header-text row if one is present, blank/#REF!
-  // spacer rows) fails that check and is skipped automatically. This matters because
-  // the two data sources disagree about whether a header row even appears in the data:
-  // Google's gviz JSON endpoint merges this sheet's two header-ish rows into synthetic
-  // column labels and excludes them from the row data entirely, so a plain-CSV-style
-  // search for a row starting with "Date" finds nothing there, while the CSV export
-  // keeps the literal header text as an ordinary (and here, self-rejecting) row.
-  function entryFromRow(row) {
-    var dateStr = (row[0] || "").trim();
-    if (!dateStr) return null; // spacer / #REF! junk row
-    var date = parseDate(dateStr);
-    if (!date) return null; // not a data row (metadata, header text, etc.)
-
-    var category = (row[1] || "").trim();
-    var bowType = (row[2] || "").trim();
-    var round = (row[3] || "").trim();
-    var score = num(row[4]);
-    var classification = cls(row[5]);
-    var handicapRating = num(row[6]);
-    var newHandicap = num(row[7]);
-    var handicapAllowance = num(row[8]);
-    var handicapAdjustedScore = num(row[9]);
-    var comment = (row[10] || "").trim();
-
-    var bucket;
-    if (bowType) bucket = bowType;
-    else if (!round) bucket = "Special";
-    else bucket = "Other";
-
-    return {
-      date: date, dateStr: dateStr, category: category, bowType: bowType, bucket: bucket,
-      round: round, score: score, classification: classification,
-      handicapRating: handicapRating, newHandicap: newHandicap,
-      handicapAllowance: handicapAllowance, handicapAdjustedScore: handicapAdjustedScore,
-      comment: comment
-    };
+  function fmtMonth(d) {
+    return MONTH_NAMES[d.getMonth()] + " " + String(d.getFullYear()).slice(2);
   }
 
-  function buildEntriesFromRows(rows) {
-    var entries = [];
-    for (var r = 0; r < rows.length; r++) {
-      var e = entryFromRow(rows[r]);
-      if (e) entries.push(e);
-    }
-    entries.sort(function (a, b) { return a.date - b.date; });
-    return entries;
+  function slug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-"); }
+
+  function by(fn) { return function (a, b) { return fn(a) - fn(b); }; }
+
+  function minBy(list, fn) {
+    let best = null;
+    list.forEach(function (x) { const v = fn(x); if (v !== null && v !== undefined && (best === null || v < fn(best))) best = x; });
+    return best;
+  }
+  function maxBy(list, fn) {
+    let best = null;
+    list.forEach(function (x) { const v = fn(x); if (v !== null && v !== undefined && (best === null || v > fn(best))) best = x; });
+    return best;
   }
 
-  // ---- Derived stats per discipline -------------------------------------
-  function rankOf(order, value) {
-    var idx = order.indexOf(value);
-    return idx === -1 ? -1 : idx;
-  }
-
-  function disciplineStats(entries) {
-    var indoorHist = entries.filter(function (e) { return e.classification && e.classification.indexOf("Indoor") === 0; });
-    var outdoorHist = entries.filter(function (e) { return e.classification && e.classification.indexOf("Indoor") !== 0; });
-
-    var currentIndoor = indoorHist.length ? indoorHist[indoorHist.length - 1] : null;
-    var currentOutdoor = outdoorHist.length ? outdoorHist[outdoorHist.length - 1] : null;
-
-    var bestIndoor = null, bestIndoorRank = -1;
-    indoorHist.forEach(function (e) {
-      var rk = rankOf(INDOOR_ORDER, e.classification);
-      if (rk > bestIndoorRank) { bestIndoorRank = rk; bestIndoor = e; }
-    });
-    var bestOutdoor = null, bestOutdoorRank = -1;
-    outdoorHist.forEach(function (e) {
-      var rk = rankOf(OUTDOOR_ORDER, e.classification);
-      if (rk > bestOutdoorRank) { bestOutdoorRank = rk; bestOutdoor = e; }
-    });
-
-    var handicaps = entries.filter(function (e) { return e.newHandicap !== null; });
-    var pbHandicapEntry = null;
-    handicaps.forEach(function (e) {
-      if (!pbHandicapEntry || e.newHandicap < pbHandicapEntry.newHandicap) pbHandicapEntry = e;
-    });
-
-    var lastShoot = entries.length ? entries[entries.length - 1] : null;
-
-    // personal bests by round type
-    var byRound = {};
-    entries.forEach(function (e) {
-      if (!e.round || e.score === null) return;
-      if (!byRound[e.round] || e.score > byRound[e.round].score) byRound[e.round] = e;
-    });
-    var pbRows = Object.keys(byRound).map(function (k) { return byRound[k]; })
-      .sort(function (a, b) { return b.date - a.date; });
-
-    var awards = entries.filter(function (e) { return /\b(1st|2nd|3rd)\b.*place|place.*\b(1st|2nd|3rd)\b|record status/i.test(e.comment); });
-
-    return {
-      currentIndoor: currentIndoor, currentOutdoor: currentOutdoor,
-      bestIndoor: bestIndoor, bestOutdoor: bestOutdoor,
-      pbHandicapEntry: pbHandicapEntry, lastShoot: lastShoot,
-      pbRows: pbRows, awards: awards, count: entries.length
-    };
-  }
-
-  // The 252 badge for a distance is earned only once an archer has scored at
-  // or above the qualifying score for that discipline and distance, on at
-  // least two separate attempts (not just logged an attempt). The name "252"
-  // is just the round's name - the actual qualifying score is set per bow
-  // type and gets lower at the longer distances.
-  var LADDER_BADGE_SCORE = {
-    Recurve:  { 20: 252, 30: 252, 40: 252, 50: 252, 60: 252, 80: 252, 100: 252 },
-    Compound: { 20: 280, 30: 280, 40: 280, 50: 280, 60: 280, 80: 280, 100: 280 },
-    Longbow:  { 20: 164, 30: 164, 40: 164, 50: 100, 60: 100, 80: 80,  100: 80 },
-    Barebow:  { 20: 189, 30: 189, 40: 189, 50: 189, 60: 189, 80: 164, 100: 139 }
-  };
-  var LADDER_BADGE_DEFAULT = 252; // fallback for a bow type not in the table above
-  var LADDER_BADGE_COUNT = 2;
-
-  function ladderBadgeScore(discipline, dist) {
-    var table = LADDER_BADGE_SCORE[discipline];
-    if (table && table[dist] !== undefined) return table[dist];
-    return LADDER_BADGE_DEFAULT;
-  }
-
-  // Best score and qualifying-attempt count at each 252-ladder distance for one
-  // discipline, keyed by distance in yards. The qualifying score depends on
-  // both the discipline and the distance, so both are needed here.
-  function ladderStats(entries, discipline) {
-    var byDist = {};
-    entries.forEach(function (e) {
-      var m = LADDER_RE.exec(e.round);
-      if (!m || e.score === null) return;
-      var d = Number(m[1]);
-      if (!byDist[d]) byDist[d] = { best: e, qualifying: 0 };
-      else if (e.score > byDist[d].best.score) byDist[d].best = e;
-      if (e.score >= ladderBadgeScore(discipline, d)) byDist[d].qualifying++;
-    });
-    return byDist;
-  }
-
-  // Best score per round type, excluding the 252-ladder rounds (which get their own view).
-  function pbByRound(entries) {
-    var out = {};
-    entries.forEach(function (e) {
-      if (!e.round || e.score === null || LADDER_RE.test(e.round)) return;
-      if (!out[e.round] || e.score > out[e.round].score) out[e.round] = e;
-    });
+  function countBy(list, fn) {
+    const out = {};
+    list.forEach(function (x) { const k = fn(x); if (k != null) out[k] = (out[k] || 0) + 1; });
     return out;
   }
 
-  function medalBadge(comment) {
-    if (/1st/i.test(comment)) return '<span class="badge p1">1ST</span>';
-    if (/2nd/i.test(comment)) return '<span class="badge p2">2ND</span>';
-    if (/3rd/i.test(comment)) return '<span class="badge p3">3RD</span>';
-    return "";
-  }
-
-  // ---- Chart rendering ---------------------------------------------------
-  var chartInstances = [];
-
-  function makeHandicapChart(canvasId, datasets) {
-    var el = document.getElementById(canvasId);
-    if (!el) return;
-    try {
-    var gridColor = cssVar("--gridline");
-    var tickColor = cssVar("--text-muted");
-    var surface = cssVar("--surface-1");
-    var chart = new Chart(el.getContext("2d"), {
-      type: "line",
-      data: { datasets: datasets },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { mode: "nearest", intersect: false },
-        scales: {
-          x: {
-            // Plain numeric (epoch ms) rather than Chart.js's "time" scale: the
-            // time scale needs an external date-adapter library, which isn't
-            // loaded here. Ticks are reformatted back into dates in the callback.
-            type: "linear",
-            grid: { color: gridColor, drawTicks: false },
-            ticks: {
-              color: tickColor, font: { size: 11 },
-              callback: function (value) {
-                return new Date(value).toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
-              }
-            },
-            border: { color: cssVar("--baseline") }
-          },
-          y: {
-            reverse: true,
-            grid: { color: gridColor, drawTicks: false },
-            ticks: { color: tickColor, font: { size: 11 } },
-            border: { color: cssVar("--baseline") },
-            title: { display: true, text: "Handicap (lower is better)", color: tickColor, font: { size: 11 } }
-          }
-        },
-        plugins: {
-          legend: {
-            display: datasets.length > 1,
-            labels: { color: cssVar("--text-secondary"), usePointStyle: true, pointStyle: "circle", boxWidth: 8, font: { size: 12 } }
-          },
-          tooltip: {
-            backgroundColor: surface, titleColor: cssVar("--text-primary"), bodyColor: cssVar("--text-secondary"),
-            borderColor: cssVar("--border"), borderWidth: 1, padding: 10, boxPadding: 4,
-            callbacks: {
-              title: function (items) {
-                var d = items && items[0] && items[0].raw && items[0].raw.entry;
-                return d ? fmtDate(d.date) : "";
-              },
-              label: function (ctx) {
-                var d = ctx.raw && ctx.raw.entry;
-                if (!d) return "Handicap " + ctx.formattedValue;
-                var parts = [d.round + ": handicap " + d.newHandicap];
-                if (d.score !== null) parts[0] += " (score " + d.score + ")";
-                if (d.classification) parts.push(d.classification);
-                return parts;
-              }
-            }
-          }
-        }
-      }
+  // =====================================================================
+  // AGB 2023 handicap and classification data (from agb-data.js)
+  // =====================================================================
+  const AGB = (function () {
+    const data = window.AGB_DATA || { rounds: {}, classHC: { outdoor: {}, indoor: {} } };
+    const byKey = {};
+    Object.keys(data.rounds).forEach(function (code) {
+      const r = data.rounds[code];
+      // Scores are stored as the handicap-0 score followed by drops per step.
+      const table = [r.s[0]];
+      for (let i = 1; i < r.s.length; i++) table.push(table[i - 1] - r.s[i]);
+      r.table = table;
+      r.code = code;
+      byKey[normKey(r.n)] = code;
     });
-    chartInstances.push(chart);
-    return chart;
-    } catch (err) {
-      // A chart failure shouldn't be able to masquerade as a data-load failure
-      // (they're caught in very different places) -- log it and leave the rest
-      // of the page, which has nothing to do with charting, working normally.
-      console.error("Chart render failed for #" + canvasId + ":", err);
-      el.insertAdjacentHTML("afterend",
-        '<p class="card-note">Could not render this chart (' + escapeHtml(err && err.message ? err.message : String(err)) + ').</p>');
-    }
-  }
 
-  function seriesFor(entries, colorVar) {
-    var color = cssVar(colorVar);
-    var points = entries.filter(function (e) { return e.newHandicap !== null; })
-      .map(function (e) { return { x: e.date.getTime(), y: e.newHandicap, entry: e }; });
+    function normKey(name) {
+      return String(name).toLowerCase()
+        .replace(/\(triple face\)|\(triple\)|triple face|triple spot/g, " triple ")
+        .replace(/\bst\.\s*/g, "st ")
+        .replace(/[^a-z0-9]/g, "");
+    }
+
+    const ALIASES = { wa18: "wa18m", wa25: "wa25m", wa70: "wa70m", wa60: "wa60m", wa1440: "wa144090m", fita18: "wa18m", fita25: "wa25m" };
+
+    // Map a round name as written in the sheet to an archeryutils round code.
+    function roundCode(name, bowType) {
+      if (!name) return null;
+      const ladder = LADDER_RE.exec(name.trim());
+      if (ladder) {
+        const code = "misc_252_" + ladder[1];
+        return data.rounds[code] ? code : null;
+      }
+      let key = normKey(name);
+      if (ALIASES[key]) key = ALIASES[key];
+      const candidates = [];
+      const isTriple = /triple$/.test(key);
+      const base = key.replace(/triple$/, "");
+      if (bowType === "Compound") {
+        if (isTriple) candidates.push(base + "compoundtriple");
+        candidates.push(base + "compound");
+      }
+      candidates.push(key, base);
+      if (bowType === "Barebow") candidates.push(base.replace(/barebow$/, "") + "barebow");
+      for (let i = 0; i < candidates.length; i++) {
+        if (byKey[candidates[i]]) return byKey[candidates[i]];
+      }
+      return null;
+    }
+
+    function round(code) { return code ? data.rounds[code] || null : null; }
+
+    // Integer AGB handicap for a score: the largest handicap that still gives
+    // this exact score, otherwise the first handicap whose score falls below it.
+    function handicapFor(code, score) {
+      const r = round(code);
+      if (!r || score == null || score <= 0 || score > r.max) return null;
+      const t = r.table;
+      let eq = -1;
+      for (let h = 0; h < t.length; h++) if (t[h] === score) eq = h;
+      if (eq >= 0) return eq;
+      for (let h = 0; h < t.length; h++) if (t[h] < score) return h;
+      return t.length - 1;
+    }
+
+    // Lowest score that earns a handicap of `hc` or better on this round.
+    function scoreFor(code, hc) {
+      const r = round(code);
+      if (!r || hc == null) return null;
+      const h = Math.max(0, Math.min(r.table.length - 1, Math.floor(hc)));
+      let s = r.table[h];
+      while (s <= r.max && handicapFor(code, s) > h) s++;
+      return s > r.max ? null : s;
+    }
+
+    // Classification thresholds for a round, weakest class first; null = not
+    // available on this round (distance or record-status rules).
+    function classScores(code, bow, gender, age) {
+      const r = round(code);
+      const list = r && r.cls && r.cls[bow] && r.cls[bow][gender] && r.cls[bow][gender][age];
+      return list ? list.slice().reverse() : null;
+    }
+
+    function classHandicaps(loc, bow, gender, age) {
+      const g = data.classHC[loc] && data.classHC[loc][bow] && data.classHC[loc][bow][gender];
+      const list = g && g[age];
+      return list ? list.slice().reverse() : null;
+    }
+
+    return { roundCode: roundCode, round: round, handicapFor: handicapFor, scoreFor: scoreFor, classScores: classScores, classHandicaps: classHandicaps };
+  })();
+
+  // =====================================================================
+  // Rows to entries
+  // =====================================================================
+  // Column positions are fixed by the sheet: 0 Date, 1 Category, 2 Bow Type,
+  // 3 Round, 4 Score, 5 Classification, 6 Handicap rating for round,
+  // 7 New Handicap, 8 Handicap round allowance, 9 Handicap adjusted score,
+  // 10 Awards / comments. Any row whose first cell is not a DD-Mon-YYYY date
+  // (header text, the "Name:" row, #REF! spacers) is skipped.
+  function entryFromRow(row) {
+    const date = parseDate(row[0]);
+    if (!date) return null;
+    const category = (row[1] || "").trim();
+    const bowType = (row[2] || "").trim();
+    const round = (row[3] || "").trim();
+    const score = num(row[4]);
+    let classification = cleanText(row[5]);
+    const comment = (row[10] || "").trim();
+
+    const bucket = bowType ? bowType : (round ? "Other" : "Special");
+    const code = AGB.roundCode(round, bowType);
+    const info = AGB.round(code);
+    const ladder = LADDER_RE.exec(round);
+
+    let loc = info ? info.loc : null;
+    if (!loc && classification) loc = /^indoor/i.test(classification) ? "indoor" : "outdoor";
+    if (!loc) loc = "outdoor"; // club shoots and unknown rounds are outdoor
+
+    let classRank = -1;
+    if (classification) {
+      classRank = ORDER[loc].indexOf(classification);
+      if (classRank === -1) {
+        const other = loc === "indoor" ? "outdoor" : "indoor";
+        if (ORDER[other].indexOf(classification) !== -1) { loc = other; classRank = ORDER[other].indexOf(classification); }
+      }
+    }
+
+    let hcRound = num(row[6]);
+    if (hcRound === null && code && score !== null) hcRound = AGB.handicapFor(code, score);
+
     return {
-      data: points, borderColor: color, backgroundColor: color,
-      pointBackgroundColor: color, pointBorderColor: cssVar("--surface-1"),
-      pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
-      borderWidth: 2, tension: 0, spanGaps: true
+      date: date, category: category, bowType: bowType, bucket: bucket,
+      ageGroup: /50\s*\+/.test(category) ? "50+" : "Adult",
+      gender: /female|lady|ladies|women/i.test(category) ? "Female" : "Open",
+      round: round, code: code, loc: loc,
+      isLadder: !!ladder, ladderDist: ladder ? Number(ladder[1]) : null,
+      score: score, classification: classification, classRank: classRank,
+      hcRound: hcRound, hcRunning: num(row[7]),
+      comment: comment, placing: placingOf(comment), recordStatus: /record status/i.test(comment)
     };
   }
 
-  function destroyCharts() {
-    chartInstances.forEach(function (c) { c.destroy(); });
-    chartInstances = [];
+  function buildEntries(rows) {
+    const out = [];
+    rows.forEach(function (r) { const e = entryFromRow(r); if (e) out.push(e); });
+    out.sort(by(function (e) { return e.date; }));
+    return out;
   }
 
-  var lastEntriesByBucket = null, lastOverviewLabel = "";
+  // Finishing position from a comment ("3rd place", "22nd in ...", "9th. ...").
+  // Only counts when the ordinal is clearly a placing, so "1st outdoor shoot"
+  // does not win a medal.
+  function placingOf(comment) {
+    if (!comment) return null;
+    let m = /\b(\d{1,3})(?:st|nd|rd|th)\b\.?\s*(?:place|in\b)/i.exec(comment);
+    if (!m) m = /\bplaced?\s+(\d{1,3})(?:st|nd|rd|th)\b/i.exec(comment);
+    if (!m) m = /^(\d{1,3})(?:st|nd|rd|th)\.\s/i.exec(comment);
+    return m ? Number(m[1]) : null;
+  }
 
-  function renderAllCharts() {
-    if (!lastEntriesByBucket) return;
-    destroyCharts();
-    var overviewDatasets = DISCIPLINE_ORDER
-      .filter(function (d) { return lastEntriesByBucket[d]; })
-      .map(function (d) {
-        var s = seriesFor(lastEntriesByBucket[d], DISCIPLINE_COLOR[d]);
-        s.label = d;
-        return s;
-      });
-    makeHandicapChart("chart-overview", overviewDatasets);
-    DISCIPLINE_ORDER.forEach(function (d) {
-      if (!lastEntriesByBucket[d]) return;
-      var s = seriesFor(lastEntriesByBucket[d], DISCIPLINE_COLOR[d]);
-      s.label = d;
-      makeHandicapChart("chart-" + d.toLowerCase(), [s]);
+  function ordinal(n) {
+    const s = ["th", "st", "nd", "rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  function resultBadges(e) {
+    let html = "";
+    if (e.placing) {
+      const cls = e.placing <= 3 ? "p" + e.placing : "pn";
+      html += '<span class="badge ' + cls + '">' + ordinal(e.placing).toUpperCase() + "</span>";
+    }
+    if (e.recordStatus) html += '<span class="badge rs" title="Record status shoot">RS</span>';
+    return html;
+  }
+
+  function isNotable(e) { return !!(e.placing || e.recordStatus); }
+
+  // =====================================================================
+  // Seasons (Archery GB: outdoor = calendar year, indoor = 1 July to 30 June)
+  // =====================================================================
+  function indoorSeasonOf(d) { return d.getMonth() >= 6 ? d.getFullYear() : d.getFullYear() - 1; }
+  function seasonOf(e) { return e.loc === "indoor" ? "in-" + indoorSeasonOf(e.date) : "out-" + e.date.getFullYear(); }
+  function indoorLabel(y) { return y + "/" + String(y + 1).slice(2); }
+
+  function seasonLabel(key) {
+    if (key === "all") return "All time";
+    const m = /^(y|out|in)-(\d{4})$/.exec(key);
+    if (!m) return key;
+    const y = Number(m[2]);
+    if (m[1] === "y") return "Calendar year " + y;
+    if (m[1] === "out") return "Outdoor " + y;
+    return "Indoor " + indoorLabel(y);
+  }
+
+  function inSeason(e, key) {
+    if (!key || key === "all") return true;
+    const m = /^(y|out|in)-(\d{4})$/.exec(key);
+    if (!m) return true;
+    const y = Number(m[2]);
+    if (m[1] === "y") return e.date.getFullYear() === y;
+    if (m[1] === "out") return e.loc === "outdoor" && e.date.getFullYear() === y;
+    return e.loc === "indoor" && indoorSeasonOf(e.date) === y;
+  }
+
+  function seasonOptions(entries) {
+    const years = {}, outs = {}, ins = {};
+    entries.forEach(function (e) {
+      years[e.date.getFullYear()] = true;
+      if (e.loc === "indoor") ins[indoorSeasonOf(e.date)] = true; else outs[e.date.getFullYear()] = true;
+    });
+    const desc = function (o) { return Object.keys(o).map(Number).sort(function (a, b) { return b - a; }); };
+    return {
+      years: desc(years).map(function (y) { return "y-" + y; }),
+      outdoor: desc(outs).map(function (y) { return "out-" + y; }),
+      indoor: desc(ins).map(function (y) { return "in-" + y; })
+    };
+  }
+
+  // Which outdoor/indoor season the classification tiles describe for a filter.
+  function classSeasonFor(key, loc, now) {
+    const m = /^(y|out|in)-(\d{4})$/.exec(key || "");
+    if (loc === "outdoor") {
+      if (m && m[1] !== "in") return Number(m[2]);
+      if (m && m[1] === "in") return Number(m[2]) + 1;
+      return now.getFullYear();
+    }
+    if (m && m[1] === "in") return Number(m[2]);
+    if (m && m[1] === "y") return Number(m[2]) - 1;
+    if (m && m[1] === "out") return Number(m[2]) - 1;
+    return indoorSeasonOf(now);
+  }
+
+  function entriesForClassSeason(entries, loc, year) {
+    return entries.filter(function (e) {
+      return e.loc === loc && e.classRank >= 0 &&
+        (loc === "indoor" ? indoorSeasonOf(e.date) === year : e.date.getFullYear() === year);
     });
   }
 
-  // ---- Panel builders -----------------------------------------------------
+  // Best classification score in a season, and how many scores reached it.
+  function bestClass(entries, loc, year) {
+    const list = entriesForClassSeason(entries, loc, year);
+    if (!list.length) return null;
+    const best = maxBy(list, function (e) { return e.classRank; });
+    const count = list.filter(function (e) { return e.classRank >= best.classRank; }).length;
+    return { entry: best, rank: best.classRank, name: ORDER[loc][best.classRank], count: count, year: year };
+  }
+
+  // Most recent season, at or before `year`, with any classification score.
+  function latestClass(entries, loc, year) {
+    const years = entries.filter(function (e) { return e.loc === loc && e.classRank >= 0; })
+      .map(function (e) { return loc === "indoor" ? indoorSeasonOf(e.date) : e.date.getFullYear(); });
+    for (let y = year; years.length && y >= Math.min.apply(null, years); y--) {
+      const b = bestClass(entries, loc, y);
+      if (b) return b;
+    }
+    return null;
+  }
+
+  function seasonName(loc, year) { return loc === "indoor" ? "Indoor " + indoorLabel(year) : "Outdoor " + year; }
+
+  // =====================================================================
+  // Chart helpers
+  // =====================================================================
+  let chartInstances = [];
+  function destroyCharts() { chartInstances.forEach(function (c) { c.destroy(); }); chartInstances = []; }
+
+  // Month-aligned ticks for a plain linear (epoch ms) axis, so labels land on
+  // the 1st of a month without needing a date-adapter library.
+  function monthTicks(min, max) {
+    const start = new Date(min), end = new Date(max);
+    const months = (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth() + 1;
+    const steps = [1, 2, 3, 4, 6, 12, 24];
+    let step = steps[steps.length - 1];
+    for (let i = 0; i < steps.length; i++) { if (months / steps[i] <= 7) { step = steps[i]; break; } }
+    const ticks = [];
+    const d = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+    while (d.getTime() <= max) {
+      if (((d.getFullYear() * 12 + d.getMonth()) % step) === 0) ticks.push({ value: d.getTime() });
+      d.setMonth(d.getMonth() + 1);
+    }
+    if (!ticks.length) ticks.push({ value: (min + max) / 2 });
+    return ticks;
+  }
+
+  function timeAxis(xs) {
+    const lo = Math.min.apply(null, xs), hi = Math.max.apply(null, xs);
+    const pad = Math.max(hi - lo < 60 * 864e5 ? 30 * 864e5 : 7 * 864e5, (hi - lo) * 0.03);
+    return {
+      type: "linear", min: lo - pad, max: hi + pad,
+      grid: { color: cssVar("--gridline"), drawTicks: false },
+      border: { color: cssVar("--baseline") },
+      afterBuildTicks: function (axis) { axis.ticks = monthTicks(axis.min, axis.max); },
+      ticks: {
+        color: cssVar("--text-muted"), font: { size: 11 }, padding: 6, autoSkip: false, maxRotation: 0,
+        callback: function (value) {
+          const d = new Date(value);
+          return d.getDate() === 1 ? fmtMonth(d) : d.getDate() + " " + fmtMonth(d);
+        }
+      }
+    };
+  }
+
+  // Draws labelled horizontal reference lines (classification thresholds and
+  // a goal) across the plot area.
+  const refLinesPlugin = {
+    id: "refLines",
+    afterDatasetsDraw: function (chart, args, opts) {
+      const lines = (opts && opts.lines) || [];
+      if (!lines.length) return;
+      const y = chart.scales.y, area = chart.chartArea, ctx = chart.ctx;
+      ctx.save();
+      ctx.font = "11px system-ui, -apple-system, 'Segoe UI', sans-serif";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+      lines.forEach(function (ln) {
+        const py = y.getPixelForValue(ln.value);
+        if (py < area.top - 0.5 || py > area.bottom + 0.5) return;
+        ctx.strokeStyle = ln.color;
+        ctx.lineWidth = ln.width || 1;
+        ctx.setLineDash(ln.dash || [4, 4]);
+        ctx.beginPath(); ctx.moveTo(area.left, py); ctx.lineTo(area.right, py); ctx.stroke();
+        ctx.setLineDash([]);
+        const text = ln.label;
+        const w = ctx.measureText(text).width;
+        ctx.fillStyle = cssVar("--surface-1");
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(area.right - w - 8, py - 15, w + 6, 14);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = ln.textColor || cssVar("--text-muted");
+        ctx.fillText(text, area.right - 5, py - 2);
+      });
+      ctx.restore();
+    }
+  };
+
+  function baseTooltip() {
+    return {
+      backgroundColor: cssVar("--surface-1"), titleColor: cssVar("--text-primary"), bodyColor: cssVar("--text-secondary"),
+      borderColor: cssVar("--border"), borderWidth: 1, padding: 10, boxPadding: 4, usePointStyle: true
+    };
+  }
+
+  function legendOpts(show) {
+    return {
+      display: show, position: "top", align: "start",
+      labels: { color: cssVar("--text-secondary"), usePointStyle: true, boxWidth: 8, boxHeight: 8, font: { size: 12 }, padding: 14 }
+    };
+  }
+
+  function makeChart(canvasId, config) {
+    const el = document.getElementById(canvasId);
+    if (!el || typeof Chart === "undefined") return null;
+    try {
+      const chart = new Chart(el.getContext("2d"), config);
+      chartInstances.push(chart);
+      return chart;
+    } catch (err) {
+      // A chart failure must not look like a data-load failure.
+      console.error("Chart render failed for #" + canvasId + ":", err);
+      el.insertAdjacentHTML("afterend", '<p class="card-note">Could not draw this chart (' + escapeHtml(err && err.message ? err.message : String(err)) + ").</p>");
+      return null;
+    }
+  }
+
+  function entryTooltipLines(e, hcField) {
+    const lines = [];
+    let head = e.round || "Club shoot";
+    if (e.score !== null) head += ": " + e.score;
+    lines.push(head);
+    if (hcField === "hcRunning" && e.hcRunning !== null) lines.push("Running handicap " + e.hcRunning);
+    if (e.hcRound !== null) lines.push("Round handicap " + e.hcRound);
+    if (e.classification) lines.push(e.classification);
+    return lines;
+  }
+
+  // Rolling mean of the last n values in time order.
+  function rolling(points, n) {
+    return points.map(function (p, i) {
+      const win = points.slice(Math.max(0, i - n + 1), i + 1);
+      const avg = win.reduce(function (s, q) { return s + q.y; }, 0) / win.length;
+      return { x: p.x, y: Math.round(avg * 10) / 10, entry: p.entry };
+    });
+  }
+
+  // =====================================================================
+  // App state
+  // =====================================================================
+  const state = {
+    entries: [],
+    byBucket: {},
+    disciplines: [],
+    tab: "overview",
+    season: "all",
+    mode: {},        // per discipline: "indoor" | "outdoor" | "both"
+    trendRound: {},  // per discipline: round name
+    logRound: {},    // per discipline: round filter
+    kit: null,
+    now: new Date()
+  };
+
+  function goalFor(d) {
+    const saved = num(store(STORAGE.goal + d));
+    if (saved !== null) return saved;
+    return DEFAULT_GOALS[d] != null ? DEFAULT_GOALS[d] : null;
+  }
+
+  function profileFor(entries) {
+    const last = entries.length ? entries[entries.length - 1] : null;
+    return { age: last ? last.ageGroup : "Adult", gender: last ? last.gender : "Open" };
+  }
+
+  function defaultMode(entries) {
+    const withHc = entries.filter(function (e) { return e.hcRound !== null; });
+    const last = withHc.length ? withHc[withHc.length - 1] : null;
+    return last ? last.loc : "outdoor";
+  }
+
+  // =====================================================================
+  // Panel: tiles
+  // =====================================================================
   function tile(label, value, small, dotVar) {
-    var dot = dotVar ? '<span class="dot" style="background:var(' + dotVar + ')"></span>' : "";
+    const dot = dotVar ? '<span class="dot" style="background:var(' + dotVar + ')" aria-hidden="true"></span>' : "";
     return '<div class="tile"><div class="label">' + label + '</div><div class="value">' + dot + value +
       (small ? "<small>" + small + "</small>" : "") + "</div></div>";
   }
 
-  function classificationLine(entry, fallback) {
-    if (!entry) return fallback;
-    return entry.classification + " <small style=\"color:var(--text-muted)\">(" + fmtDate(entry.date) + ")</small>";
+  function classTile(allEntries, loc) {
+    const year = classSeasonFor(state.season, loc, state.now);
+    const cur = bestClass(allEntries, loc, year);
+    const label = (loc === "indoor" ? "Indoor" : "Outdoor") + " classification";
+    if (cur) {
+      return tile(label, escapeHtml(cur.name),
+        seasonName(loc, year) + " best · " + cur.count + (cur.count === 1 ? " score" : " scores") + " at this level or above");
+    }
+    const prev = latestClass(allEntries, loc, year - 1);
+    return tile(label, '<span class="muted">None yet</span>',
+      "in " + seasonName(loc, year) + (prev ? " · " + seasonName(loc, prev.year) + ": " + escapeHtml(prev.name) : ""));
   }
 
-  function buildDisciplinePanel(name, entries) {
-    var stats = disciplineStats(entries);
-    var colorVar = DISCIPLINE_COLOR[name];
-    var rounds = Array.from(new Set(entries.map(function (e) { return e.round; }).filter(Boolean))).sort();
+  function bestRoundTile(entries, loc) {
+    const list = entries.filter(function (e) { return e.loc === loc && e.hcRound !== null && !e.isLadder; });
+    const best = minBy(list, function (e) { return e.hcRound; });
+    const label = "Best " + loc + " round";
+    if (!best) return tile(label, "-", "no " + loc + " rounds in this view");
+    return tile(label, "Handicap " + best.hcRound, escapeHtml(best.round) + " " + best.score + " · " + fmtDate(best.date));
+  }
 
-    var html = "";
-    html += '<div class="tile-row">';
-    html += tile("Shoots logged", stats.count, null, colorVar);
-    html += tile("Personal best handicap", stats.pbHandicapEntry ? stats.pbHandicapEntry.newHandicap : "-",
-      stats.pbHandicapEntry ? (stats.pbHandicapEntry.round + " · " + fmtDate(stats.pbHandicapEntry.date)) : "");
-    html += tile("Last shoot", stats.lastShoot ? fmtDate(stats.lastShoot.date) : "-",
-      stats.lastShoot ? stats.lastShoot.round : "");
-    html += tile("Outdoor classification", stats.currentOutdoor ? stats.currentOutdoor.classification : "-",
-      stats.currentOutdoor ? "as of " + fmtDate(stats.currentOutdoor.date) : "not yet classified");
-    html += tile("Indoor classification", stats.currentIndoor ? stats.currentIndoor.classification : "-",
-      stats.currentIndoor ? "as of " + fmtDate(stats.currentIndoor.date) : "not yet classified");
+  // =====================================================================
+  // Panel: "What do I need next?"
+  // =====================================================================
+  function needCell(pb, needed) {
+    if (needed === null || needed === undefined) return '<span class="status-pending" title="Not available on this round (distance or record-status rules)">n/a</span>';
+    if (pb !== null && pb >= needed) return '<span class="status-good">' + needed + " · reached</span>";
+    const gap = pb === null ? "" : ' <span class="muted small">(+' + (needed - pb) + ")</span>";
+    return "<strong>" + needed + "</strong>" + gap;
+  }
+
+  function nextBlock(name, allEntries, loc) {
+    const prof = profileFor(allEntries);
+    const year = loc === "indoor" ? indoorSeasonOf(state.now) : state.now.getFullYear();
+    const cur = bestClass(allEntries, loc, year);
+    const prev = cur ? null : latestClass(allEntries, loc, year - 1);
+    const ref = cur || prev;
+    const order = ORDER[loc], short = SHORT[loc];
+    const nextRank = Math.min(order.length - 1, ref ? ref.rank + 1 : 0);
+    const holdRank = ref ? ref.rank : null;
+
+    // Rounds this bow has shot at this location that carry classifications.
+    const counts = {};
+    allEntries.forEach(function (e) {
+      if (e.loc !== loc || !e.code || e.isLadder || e.score === null) return;
+      if (!AGB.classScores(e.code, name, prof.gender, prof.age)) return;
+      counts[e.code] = (counts[e.code] || 0) + 1;
+    });
+    const codes = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, 6);
+
+    const locTitle = loc === "indoor" ? "Indoor" : "Outdoor";
+    let html = "<h3>" + locTitle + "</h3>";
+    let summary;
+    if (cur) summary = "This season (" + seasonName(loc, year) + ") best so far: <strong>" + escapeHtml(cur.name) + "</strong>.";
+    else if (prev) summary = "Nothing yet in " + seasonName(loc, year) + ". Most recent: <strong>" + escapeHtml(prev.name) + "</strong> (" + seasonName(loc, prev.year) + ").";
+    else summary = "No " + loc + " classification scores yet.";
+    summary += " Next up: <strong>" + escapeHtml(order[nextRank]) + "</strong>.";
+    html += '<p class="next-summary">' + summary + "</p>";
+
+    if (!codes.length) {
+      html += '<p class="card-note">No ' + loc + " rounds with Archery GB classifications shot with this bow yet.</p>";
+      return html;
+    }
+
+    const goal = goalFor(name);
+    const running = (function () {
+      const withRun = allEntries.filter(function (e) { return e.hcRunning !== null; });
+      return withRun.length ? withRun[withRun.length - 1].hcRunning : null;
+    })();
+
+    html += '<div class="table-wide-scroll"><table><thead><tr><th>Round</th><th class="num">Shot</th><th class="num">PB</th>' +
+      '<th class="num">Last 3 avg</th>' +
+      (running !== null ? '<th class="num" title="Score your current running handicap is worth on this round">At hcp ' + running + "</th>" : "") +
+      (holdRank !== null && holdRank !== nextRank ? '<th class="num">' + short[holdRank] + "</th>" : "") +
+      '<th class="num">' + short[nextRank] + " (next)</th>" +
+      (goal !== null ? '<th class="num">Hcp ' + goal + " target</th>" : "") +
+      "</tr></thead><tbody>";
+    codes.forEach(function (code) {
+      const r = AGB.round(code);
+      const shots = allEntries.filter(function (e) { return e.code === code && e.score !== null; });
+      const pbE = maxBy(shots, function (e) { return e.score; });
+      const pb = pbE ? pbE.score : null;
+      const last3 = shots.slice(-3);
+      const avg = last3.length ? Math.round(last3.reduce(function (s, e) { return s + e.score; }, 0) / last3.length) : null;
+      const thresholds = AGB.classScores(code, name, prof.gender, prof.age) || [];
+      html += "<tr><td>" + escapeHtml(r.n) + '</td><td class="num">' + counts[code] + '</td><td class="num">' +
+        (pb !== null ? pb : "-") + '</td><td class="num">' + (avg !== null ? avg : "-") + "</td>" +
+        (running !== null ? '<td class="num">' + (AGB.scoreFor(code, running) || "-") + "</td>" : "") +
+        (holdRank !== null && holdRank !== nextRank ? '<td class="num">' + needCell(pb, thresholds[holdRank]) + "</td>" : "") +
+        '<td class="num">' + needCell(pb, thresholds[nextRank]) + "</td>" +
+        (goal !== null ? '<td class="num">' + needCell(pb, AGB.scoreFor(code, goal)) + "</td>" : "") +
+        "</tr>";
+    });
+    html += "</tbody></table></div>";
+    return html;
+  }
+
+  function nextCard(name, allEntries) {
+    const prof = profileFor(allEntries);
+    const goal = goalFor(name);
+    let html = '<div class="card" id="next-' + slug(name) + '"><div class="card-head"><div><h2>What do I need next?</h2>' +
+      '<p class="card-note">Scores needed on the rounds you shoot most, using Archery GB 2023 tables for ' +
+      escapeHtml((prof.gender === "Female" ? "female " : "") + prof.age.replace("Adult", "adult") + " " + name.toLowerCase()) +
+      '. Bracketed numbers are points above your PB. Classifications also need enough qualifying scores in the season, and Master Bowman and above need record-status rounds.</p></div>' +
+      '<label class="ctl">Target handicap <input type="number" min="0" max="150" step="1" inputmode="numeric" data-goal="' + escapeHtml(name) + '" value="' + (goal !== null ? goal : "") + '" placeholder="none"></label></div>';
+    html += nextBlock(name, allEntries, "outdoor");
+    html += nextBlock(name, allEntries, "indoor");
+    html += "</div>";
+    return html;
+  }
+
+  // =====================================================================
+  // Panel: discipline
+  // =====================================================================
+  function buildDisciplinePanel(name, allEntries) {
+    const entries = allEntries.filter(function (e) { return inSeason(e, state.season); });
+    const colorVar = DISCIPLINE_COLOR[name];
+    const id = slug(name);
+    const indoorN = entries.filter(function (e) { return e.loc === "indoor"; }).length;
+    const withRun = entries.filter(function (e) { return e.hcRunning !== null; });
+    const latestRun = withRun.length ? withRun[withRun.length - 1] : null;
+    const lowestRun = minBy(allEntries.filter(function (e) { return e.hcRunning !== null; }), function (e) { return e.hcRunning; });
+
+    let html = '<div class="tile-row">';
+    html += tile("Shoots logged", entries.length, indoorN + " indoor · " + (entries.length - indoorN) + " outdoor", colorVar);
+    html += tile("Running handicap", latestRun ? latestRun.hcRunning : "-",
+      lowestRun ? "lowest ever " + lowestRun.hcRunning + " · " + fmtDate(lowestRun.date) : "");
+    html += bestRoundTile(entries, "outdoor");
+    html += bestRoundTile(entries, "indoor");
+    html += classTile(allEntries, "outdoor");
+    html += classTile(allEntries, "indoor");
     html += "</div>";
 
-    html += '<div class="card"><h2>Handicap progression: ' + name + '</h2>';
-    html += '<p class="card-note">Every recorded shoot for this bow type, chart axis inverted so an improving handicap reads as an upward line.</p>';
-    html += '<div class="chart-box"><canvas id="chart-' + name.toLowerCase() + '"></canvas></div></div>';
+    if (!entries.length) {
+      html += '<div class="card"><p class="muted">No ' + name.toLowerCase() + " shoots in " + escapeHtml(seasonLabel(state.season)) + ".</p></div>";
+      html += nextCard(name, allEntries);
+      return html;
+    }
 
-    if (stats.awards.length) {
+    // Handicap progression with indoor/outdoor split and classification lines.
+    const mode = state.mode[name] || defaultMode(entries);
+    state.mode[name] = mode;
+    html += '<div class="card"><div class="card-head"><div><h2>Handicap progression: ' + escapeHtml(name) + "</h2>" +
+      '<p class="card-note">' + (mode === "both"
+        ? "Every shoot's round handicap, with the sheet's running handicap as the line. Choose indoor or outdoor to see classification thresholds."
+        : "Each " + mode + " round's handicap, the line is the average of the last three. Dashed lines are " + mode + " classification thresholds for your category.") +
+      " Axis inverted: up is better.</p></div>" +
+      '<div class="seg" role="group" aria-label="Rounds to show">' +
+      ["outdoor", "indoor", "both"].map(function (m) {
+        return '<button type="button" data-mode="' + m + '" data-disc="' + escapeHtml(name) + '" aria-pressed="' + (m === mode) + '">' +
+          (m === "both" ? "Both" : m.charAt(0).toUpperCase() + m.slice(1)) + "</button>";
+      }).join("") + "</div></div>" +
+      '<div class="chart-box"><canvas id="chart-' + id + '" role="img" aria-label="' + escapeHtml(name) + ' handicap progression chart"></canvas></div></div>';
+
+    html += nextCard(name, allEntries);
+
+    // Score trend for one round.
+    const roundCounts = countBy(entries.filter(function (e) { return e.score !== null && e.round; }), function (e) { return e.round; });
+    const trendRounds = Object.keys(roundCounts).filter(function (r) { return roundCounts[r] >= 2; })
+      .sort(function (a, b) { return roundCounts[b] - roundCounts[a] || a.localeCompare(b); });
+    if (trendRounds.length) {
+      let tr = state.trendRound[name];
+      if (!tr || trendRounds.indexOf(tr) === -1) {
+        tr = trendRounds.filter(function (r) { return !LADDER_RE.test(r); })[0] || trendRounds[0];
+        state.trendRound[name] = tr;
+      }
+      html += '<div class="card"><div class="card-head"><div><h2>Score trend by round</h2>' +
+        '<p class="card-note">Every score on one round, with a rolling average of the last three and the next classification score where one applies.</p></div>' +
+        '<label class="ctl">Round <select data-trend="' + escapeHtml(name) + '">' +
+        trendRounds.map(function (r) {
+          return '<option value="' + escapeHtml(r) + '"' + (r === tr ? " selected" : "") + ">" + escapeHtml(r) + " (" + roundCounts[r] + ")</option>";
+        }).join("") + "</select></label></div>" +
+        '<div class="chart-box short"><canvas id="trend-' + id + '" role="img" aria-label="Score trend for ' + escapeHtml(tr) + '"></canvas></div></div>';
+    }
+
+    // Notable results.
+    const notable = entries.filter(isNotable);
+    if (notable.length) {
       html += '<div class="card"><h2>Notable results</h2><div class="table-scroll"><table><thead><tr>' +
         '<th>Date</th><th>Round</th><th class="num">Score</th><th>Comment</th></tr></thead><tbody>';
-      stats.awards.slice().sort(function (a, b) { return b.date - a.date; }).forEach(function (e) {
-        html += "<tr><td>" + fmtDate(e.date) + "</td><td>" + e.round + '</td><td class="num">' + (e.score !== null ? e.score : "-") +
-          "</td><td>" + medalBadge(e.comment) + escapeHtml(e.comment) + "</td></tr>";
+      notable.slice().reverse().forEach(function (e) {
+        html += '<tr><td class="nowrap">' + fmtDate(e.date) + "</td><td>" + escapeHtml(e.round) + '</td><td class="num">' +
+          (e.score !== null ? e.score : "-") + "</td><td>" + resultBadges(e) + escapeHtml(e.comment) + "</td></tr>";
       });
       html += "</tbody></table></div></div>";
     }
 
-    html += '<div class="card"><h2>Personal bests by round</h2><div class="table-scroll"><table><thead><tr>' +
-      '<th>Round</th><th class="num">Best score</th><th>Date</th><th>Classification</th></tr></thead><tbody>';
-    stats.pbRows.forEach(function (e) {
-      html += "<tr><td>" + e.round + '</td><td class="num">' + e.score + "</td><td>" + fmtDate(e.date) +
-        "</td><td>" + (e.classification || "-") + "</td></tr>";
+    // Personal bests by round (the 252 ladder has its own table on the overview).
+    const pb = {};
+    entries.forEach(function (e) {
+      if (!e.round || e.score === null || e.isLadder) return;
+      if (!pb[e.round] || e.score > pb[e.round].score) pb[e.round] = e;
+    });
+    const pbRows = Object.keys(pb).map(function (k) { return pb[k]; }).sort(function (a, b) { return b.date - a.date; });
+    if (pbRows.length) {
+      html += '<div class="card"><h2>Personal bests by round</h2><div class="table-scroll"><table><thead><tr>' +
+        '<th>Round</th><th class="num">Best score</th><th class="num">Handicap</th><th>Date</th><th>Classification</th></tr></thead><tbody>';
+      pbRows.forEach(function (e) {
+        html += "<tr><td>" + escapeHtml(e.round) + '</td><td class="num">' + e.score + '</td><td class="num">' +
+          (e.hcRound !== null ? e.hcRound : "-") + '</td><td class="nowrap">' + fmtDate(e.date) + "</td><td>" +
+          escapeHtml(e.classification || "-") + "</td></tr>";
+      });
+      html += "</tbody></table></div></div>";
+    }
+
+    // Full log.
+    const rounds = Array.from(new Set(entries.map(function (e) { return e.round; }).filter(Boolean))).sort();
+    const lr = rounds.indexOf(state.logRound[name]) !== -1 ? state.logRound[name] : "";
+    html += '<div class="card"><h2>Full log: ' + escapeHtml(name) + "</h2>";
+    html += '<div class="controls-row"><label class="ctl">Round <select data-log="' + escapeHtml(name) + '"><option value="">All rounds</option>' +
+      rounds.map(function (r) { return '<option value="' + escapeHtml(r) + '"' + (r === lr ? " selected" : "") + ">" + escapeHtml(r) + "</option>"; }).join("") +
+      "</select></label></div>";
+    html += '<div class="table-scroll"><table><thead><tr>' +
+      '<th>Date</th><th>Round</th><th>Where</th><th class="num">Score</th><th>Classification</th><th class="num">Round hcp</th><th class="num">Running hcp</th><th>Comment</th>' +
+      "</tr></thead><tbody>";
+    entries.slice().reverse().filter(function (e) { return !lr || e.round === lr; }).forEach(function (e) {
+      html += '<tr><td class="nowrap">' + fmtDate(e.date) + "</td><td>" + escapeHtml(e.round) + '</td><td><span class="pill">' + e.loc + '</span></td><td class="num">' +
+        (e.score !== null ? e.score : "-") + "</td><td>" + escapeHtml(e.classification || "-") + '</td><td class="num">' +
+        (e.hcRound !== null ? e.hcRound : "-") + '</td><td class="num">' + (e.hcRunning !== null ? e.hcRunning : "-") + "</td><td>" +
+        resultBadges(e) + escapeHtml(e.comment) + "</td></tr>";
     });
     html += "</tbody></table></div></div>";
-
-    html += '<div class="card"><h2>Full log: ' + name + '</h2>';
-    html += '<div class="controls-row"><label for="filter-' + name + '" style="font-size:0.82rem;color:var(--text-secondary);">Round:</label>' +
-      '<select id="filter-' + name + '"><option value="">All rounds</option>' +
-      rounds.map(function (r) { return '<option value="' + escapeHtml(r) + '">' + escapeHtml(r) + "</option>"; }).join("") +
-      "</select></div>";
-    html += '<div class="table-scroll table-wide-scroll"><table id="table-' + name + '"><thead><tr>' +
-      "<th>Date</th><th>Round</th><th class=\"num\">Score</th><th>Classification</th><th class=\"num\">Handicap</th><th>Comment</th></tr></thead><tbody></tbody></table></div></div>";
-
-    return { html: html, entries: entries };
+    return html;
   }
 
-  function renderDisciplineTable(name, entries, filterRound) {
-    var tbody = document.querySelector("#table-" + name + " tbody");
-    if (!tbody) return;
-    var rows = entries.slice().sort(function (a, b) { return b.date - a.date; })
-      .filter(function (e) { return !filterRound || e.round === filterRound; });
-    tbody.innerHTML = rows.map(function (e) {
-      return "<tr><td>" + fmtDate(e.date) + "</td><td>" + escapeHtml(e.round) + '</td><td class="num">' +
-        (e.score !== null ? e.score : "-") + "</td><td>" + (e.classification || "-") + '</td><td class="num">' +
-        (e.newHandicap !== null ? e.newHandicap : "-") + "</td><td>" + escapeHtml(e.comment) + "</td></tr>";
-    }).join("");
-  }
+  function drawDisciplineCharts(name, allEntries) {
+    const entries = allEntries.filter(function (e) { return inSeason(e, state.season); });
+    const id = slug(name);
+    const color = cssVar(DISCIPLINE_COLOR[name]);
+    const surface = cssVar("--surface-1");
+    const muted = cssVar("--text-muted");
+    const mode = state.mode[name] || "both";
+    const prof = profileFor(allEntries);
 
-  function escapeHtml(s) {
-    return String(s || "").replace(/[&<>"']/g, function (c) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-    });
-  }
-
-  function buildOverviewPanel(entriesByBucket, specialEntries) {
-    var allAwards = [];
-    DISCIPLINE_ORDER.forEach(function (d) {
-      if (!entriesByBucket[d]) return;
-      disciplineStats(entriesByBucket[d]).awards.forEach(function (e) {
-        allAwards.push({ discipline: d, entry: e });
+    // --- Handicap progression ---
+    const shots = entries.filter(function (e) { return e.hcRound !== null && (mode === "both" || e.loc === mode); });
+    const datasets = [];
+    let lineSeries = [];
+    if (mode === "both") {
+      lineSeries = entries.filter(function (e) { return e.hcRunning !== null; })
+        .map(function (e) { return { x: e.date.getTime(), y: e.hcRunning, entry: e }; });
+      datasets.push({
+        label: "Running handicap", data: lineSeries, borderColor: color, backgroundColor: color,
+        borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, stepped: "before", order: 1, hcField: "hcRunning"
+      });
+    } else {
+      const pts = shots.map(function (e) { return { x: e.date.getTime(), y: e.hcRound, entry: e }; });
+      lineSeries = rolling(pts, 3);
+      datasets.push({
+        label: (mode === "indoor" ? "Indoor" : "Outdoor") + " form (last 3)", data: lineSeries, borderColor: color, backgroundColor: color,
+        borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: 0.25, order: 1, hcField: "hcRound"
+      });
+    }
+    ["outdoor", "indoor"].forEach(function (loc) {
+      if (mode !== "both" && mode !== loc) return;
+      const pts = shots.filter(function (e) { return e.loc === loc; }).map(function (e) { return { x: e.date.getTime(), y: e.hcRound, entry: e }; });
+      if (!pts.length) return;
+      datasets.push({
+        label: (loc === "indoor" ? "Indoor" : "Outdoor") + " round", data: pts, showLine: false,
+        pointStyle: loc === "indoor" ? "rectRot" : "circle",
+        pointRadius: loc === "indoor" ? 5 : 4, pointHoverRadius: 7,
+        backgroundColor: muted, borderColor: surface, pointBorderWidth: 1.5, order: 2, hcField: "hcRound"
       });
     });
-    (specialEntries || []).forEach(function (e) { allAwards.push({ discipline: "Special shoot", entry: e }); });
-    allAwards.sort(function (a, b) { return b.entry.date - a.entry.date; });
 
-    var html = '<div class="tile-row">';
-    DISCIPLINE_ORDER.forEach(function (d) {
-      if (!entriesByBucket[d]) return;
-      var s = disciplineStats(entriesByBucket[d]);
-      var current = s.currentOutdoor || s.currentIndoor;
-      html += tile(d, current ? current.classification : (s.count + " shoots"),
-        s.pbHandicapEntry ? "PB handicap " + s.pbHandicapEntry.newHandicap : "", DISCIPLINE_COLOR[d]);
+    const lines = [];
+    const ys = shots.map(function (e) { return e.hcRound; }).concat(lineSeries.map(function (p) { return p.y; }));
+    if (mode !== "both") {
+      const hcs = AGB.classHandicaps(mode, name, prof.gender, prof.age);
+      if (hcs) {
+        const bestNow = Math.min.apply(null, ys.length ? ys : [150]);
+        hcs.forEach(function (h, i) {
+          lines.push({ value: h, label: SHORT[mode][i] + " · " + h, color: cssVar("--baseline") });
+        });
+        // Keep the next threshold above your best in view.
+        const nextUp = hcs.filter(function (h) { return h < bestNow; }).sort(function (a, b) { return b - a; })[0];
+        if (nextUp !== undefined) ys.push(nextUp);
+      }
+    }
+    const goal = goalFor(name);
+    if (goal !== null) {
+      lines.push({ value: goal, label: "Target " + goal, color: cssVar("--text-secondary"), textColor: cssVar("--text-secondary"), dash: [8, 4], width: 1.5 });
+      ys.push(goal);
+    }
+    const xs = shots.map(function (e) { return e.date.getTime(); }).concat(lineSeries.map(function (p) { return p.x; }));
+    if (xs.length) {
+      makeChart("chart-" + id, {
+        type: "line",
+        data: { datasets: datasets },
+        plugins: [refLinesPlugin],
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          interaction: { mode: "nearest", intersect: false },
+          scales: {
+            x: timeAxis(xs),
+            y: {
+              reverse: true,
+              suggestedMin: Math.max(0, Math.min.apply(null, ys) - 3),
+              suggestedMax: Math.max.apply(null, ys) + 3,
+              grid: { color: cssVar("--gridline"), drawTicks: false },
+              border: { color: cssVar("--baseline") },
+              ticks: { color: muted, font: { size: 11 }, padding: 6 },
+              title: { display: true, text: "Handicap (lower is better)", color: muted, font: { size: 11 } }
+            }
+          },
+          plugins: {
+            legend: legendOpts(true),
+            refLines: { lines: lines },
+            tooltip: Object.assign(baseTooltip(), {
+              callbacks: {
+                title: function (items) { const e = items[0] && items[0].raw && items[0].raw.entry; return e ? fmtDate(e.date) : ""; },
+                label: function (ctx) {
+                  const e = ctx.raw && ctx.raw.entry;
+                  if (!e) return ctx.dataset.label + ": " + ctx.formattedValue;
+                  if (ctx.dataset.showLine === false) return entryTooltipLines(e, "hcRound");
+                  return ctx.dataset.label + ": " + ctx.raw.y;
+                }
+              }
+            })
+          }
+        }
+      });
+    } else {
+      const el = document.getElementById("chart-" + id);
+      if (el) el.parentNode.innerHTML = '<p class="muted">No ' + (mode === "both" ? "" : mode + " ") + "rounds with a handicap in this view.</p>";
+    }
+
+    // --- Score trend ---
+    const tr = state.trendRound[name];
+    const trendShots = entries.filter(function (e) { return e.round === tr && e.score !== null; });
+    if (trendShots.length) {
+      const pts = trendShots.map(function (e) { return { x: e.date.getTime(), y: e.score, entry: e }; });
+      const avg = rolling(pts, 3);
+      const tlines = [];
+      const code = trendShots[0].code;
+      const tys = pts.map(function (p) { return p.y; });
+      if (code) {
+        const loc = trendShots[0].loc;
+        const cls = AGB.classScores(code, name, prof.gender, prof.age);
+        if (cls) {
+          const best = Math.max.apply(null, tys);
+          // Show the threshold you last reached and the next one above your best.
+          const reached = cls.map(function (s, i) { return { s: s, i: i }; }).filter(function (c) { return c.s !== null && c.s <= best; }).pop();
+          const next = cls.map(function (s, i) { return { s: s, i: i }; }).filter(function (c) { return c.s !== null && c.s > best; })[0];
+          [reached, next].forEach(function (c) {
+            if (!c) return;
+            tlines.push({ value: c.s, label: SHORT[loc][c.i] + " · " + c.s, color: cssVar("--baseline") });
+            tys.push(c.s);
+          });
+        }
+      }
+      if (trendShots[0].isLadder) {
+        const t = LADDER_BADGE_SCORE[name] && LADDER_BADGE_SCORE[name][trendShots[0].ladderDist] || LADDER_BADGE_DEFAULT;
+        tlines.push({ value: t, label: "252 badge · " + t, color: cssVar("--baseline") });
+        tys.push(t);
+      }
+      makeChart("trend-" + id, {
+        type: "line",
+        data: {
+          datasets: [
+            { label: "Average of last 3", data: avg, borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: 0.25, order: 1 },
+            { label: "Score", data: pts, showLine: false, pointRadius: 4, pointHoverRadius: 7, backgroundColor: muted, borderColor: surface, pointBorderWidth: 1.5, order: 2 }
+          ]
+        },
+        plugins: [refLinesPlugin],
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          interaction: { mode: "nearest", intersect: false },
+          scales: {
+            x: timeAxis(pts.map(function (p) { return p.x; })),
+            y: {
+              suggestedMin: Math.min.apply(null, tys) - 10, suggestedMax: Math.max.apply(null, tys) + 10,
+              grid: { color: cssVar("--gridline"), drawTicks: false }, border: { color: cssVar("--baseline") },
+              ticks: { color: muted, font: { size: 11 }, padding: 6 },
+              title: { display: true, text: "Score", color: muted, font: { size: 11 } }
+            }
+          },
+          plugins: {
+            legend: legendOpts(true),
+            refLines: { lines: tlines },
+            tooltip: Object.assign(baseTooltip(), {
+              callbacks: {
+                title: function (items) { const e = items[0] && items[0].raw && items[0].raw.entry; return e ? fmtDate(e.date) : ""; },
+                label: function (ctx) {
+                  if (ctx.dataset.showLine === false) return entryTooltipLines(ctx.raw.entry, "hcRound");
+                  return ctx.dataset.label + ": " + ctx.raw.y;
+                }
+              }
+            })
+          }
+        }
+      });
+    }
+  }
+
+  // =====================================================================
+  // Panel: overview
+  // =====================================================================
+  function ladderStats(entries, discipline) {
+    const byDist = {};
+    entries.forEach(function (e) {
+      if (!e.isLadder || e.score === null) return;
+      const d = e.ladderDist;
+      if (!byDist[d]) byDist[d] = { best: e, qualifying: 0, attempts: 0 };
+      else if (e.score > byDist[d].best.score) byDist[d].best = e;
+      byDist[d].attempts++;
+      const threshold = (LADDER_BADGE_SCORE[discipline] || {})[d] || LADDER_BADGE_DEFAULT;
+      if (e.score >= threshold) byDist[d].qualifying++;
+    });
+    return byDist;
+  }
+
+  function buildOverviewPanel() {
+    const disciplines = state.disciplines;
+    const filtered = state.entries.filter(function (e) { return inSeason(e, state.season); });
+    const special = filtered.filter(function (e) { return e.bucket === "Special" || e.bucket === "Other"; });
+
+    let html = '<div class="tile-row">';
+    disciplines.forEach(function (d) {
+      const all = state.byBucket[d];
+      const outYear = classSeasonFor(state.season, "outdoor", state.now);
+      const inYear = classSeasonFor(state.season, "indoor", state.now);
+      const o = bestClass(all, "outdoor", outYear), i = bestClass(all, "indoor", inYear);
+      const withRun = all.filter(function (e) { return e.hcRunning !== null && inSeason(e, state.season); });
+      const run = withRun.length ? withRun[withRun.length - 1].hcRunning : null;
+      const lines = [];
+      if (run !== null) lines.push("Handicap " + run);
+      if (o) lines.push(seasonName("outdoor", outYear) + ": " + escapeHtml(o.name));
+      if (i) lines.push(seasonName("indoor", inYear) + ": " + escapeHtml(i.name));
+      if (!o && !i) {
+        const lo = latestClass(all, "outdoor", outYear - 1), li = latestClass(all, "indoor", inYear - 1);
+        if (lo) lines.push(seasonName("outdoor", lo.year) + ": " + escapeHtml(lo.name));
+        if (li) lines.push(seasonName("indoor", li.year) + ": " + escapeHtml(li.name));
+        if (!lo && !li) lines.push("No classification scores yet");
+      }
+      const count = all.filter(function (e) { return inSeason(e, state.season); }).length;
+      html += tile('<a href="#' + slug(d) + '" data-nav="' + slug(d) + '" style="color:inherit">' + d + "</a>", count + (count === 1 ? " shoot" : " shoots"), lines.join("<br>"), DISCIPLINE_COLOR[d]);
     });
     html += "</div>";
 
-    html += '<div class="card"><h2>Handicap progression: all disciplines</h2>';
-    html += '<p class="card-note">Lower handicap is better; the axis is inverted so an upward line always means improvement.</p>';
-    html += '<div class="chart-box"><canvas id="chart-overview"></canvas></div></div>';
+    html += '<div class="card"><h2>Handicap progression: all bow types</h2>';
+    html += '<p class="card-note">Running handicap from the sheet for each bow type. Lower is better; the axis is inverted so an upward line means improvement.</p>';
+    html += '<div class="chart-box"><canvas id="chart-overview" role="img" aria-label="Running handicap by bow type over time"></canvas></div></div>';
 
-    html += '<div class="card"><h2>Trophy cabinet</h2><p class="card-note">Podium finishes and notable results across every discipline, most recent first.</p>';
-    if (allAwards.length) {
-      html += '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Discipline</th><th>Round</th><th class="num">Score</th><th>Comment</th></tr></thead><tbody>';
-      allAwards.forEach(function (a) {
-        html += "<tr><td>" + fmtDate(a.entry.date) + "</td><td>" + a.discipline + "</td><td>" + (a.entry.round || "-") +
-          '</td><td class="num">' + (a.entry.score !== null ? a.entry.score : "-") + "</td><td>" +
-          medalBadge(a.entry.comment) + escapeHtml(a.entry.comment) + "</td></tr>";
+    // Activity.
+    if (filtered.length) {
+      const dates = filtered.map(function (e) { return e.date; });
+      const dayKeys = Array.from(new Set(dates.map(function (d) { return d.getTime(); }))).sort(function (a, b) { return a - b; });
+      let gap = 0, gapFrom = null, gapTo = null;
+      for (let k = 1; k < dayKeys.length; k++) {
+        const g = Math.round((dayKeys[k] - dayKeys[k - 1]) / 864e5);
+        if (g > gap) { gap = g; gapFrom = new Date(dayKeys[k - 1]); gapTo = new Date(dayKeys[k]); }
+      }
+      const monthCounts = countBy(filtered, function (e) { return e.date.getFullYear() * 12 + e.date.getMonth(); });
+      const busiestKey = Object.keys(monthCounts).sort(function (a, b) { return monthCounts[b] - monthCounts[a] || b - a; })[0];
+      const busiest = busiestKey ? new Date(Math.floor(busiestKey / 12), busiestKey % 12, 1) : null;
+      const yearAgo = new Date(state.now.getFullYear() - 1, state.now.getMonth(), state.now.getDate());
+      const last12 = state.entries.filter(function (e) { return e.date > yearAgo; }).length;
+      const roundsShot = new Set(filtered.map(function (e) { return e.round; }).filter(Boolean)).size;
+      const shootingDays = dayKeys.length;
+
+      html += '<div class="card"><h2>Activity</h2><p class="card-note">Shoots logged per month, by bow type.</p>';
+      html += '<div class="tile-row" style="margin-bottom:14px">';
+      html += tile("Last 12 months", last12 + " shoots", "all bow types");
+      html += tile("Shooting days", shootingDays, roundsShot + " different rounds");
+      html += tile("Busiest month", busiest ? MONTH_NAMES[busiest.getMonth()] + " " + busiest.getFullYear() : "-", busiest ? monthCounts[busiestKey] + " shoots" : "");
+      html += tile("Longest break", gap ? gap + " days" : "-", gapFrom ? fmtDate(gapFrom) + " to " + fmtDate(gapTo) : "");
+      html += "</div>";
+      html += '<div class="chart-box short"><canvas id="chart-activity" role="img" aria-label="Shoots per month by bow type"></canvas></div></div>';
+    }
+
+    // Trophy cabinet.
+    const notable = filtered.filter(isNotable).slice().reverse();
+    const podiums = notable.filter(function (e) { return e.placing && e.placing <= 3; }).length;
+    html += '<div class="card"><h2>Trophy cabinet</h2><p class="card-note">' + podiums + " podium finish" + (podiums === 1 ? "" : "es") +
+      " in this view, plus other placings and record-status shoots, most recent first.</p>";
+    if (notable.length) {
+      html += '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Bow type</th><th>Round</th><th class="num">Score</th><th>Comment</th></tr></thead><tbody>';
+      notable.forEach(function (e) {
+        html += '<tr><td class="nowrap">' + fmtDate(e.date) + "</td><td>" + escapeHtml(e.bowType || "Club shoot") + "</td><td>" + escapeHtml(e.round || "-") +
+          '</td><td class="num">' + (e.score !== null ? e.score : "-") + "</td><td>" + resultBadges(e) + escapeHtml(e.comment) + "</td></tr>";
       });
       html += "</tbody></table></div>";
     } else {
-      html += "<p>No podium finishes recorded yet.</p>";
+      html += '<p class="muted">No placings recorded in this view.</p>';
     }
     html += "</div>";
 
-    var disciplinesPresent = DISCIPLINE_ORDER.filter(function (d) { return entriesByBucket[d]; });
-
-    // Cross-discipline personal bests, one row per round type shot.
-    var allRounds = {};
-    disciplinesPresent.forEach(function (d) {
-      Object.keys(pbByRound(entriesByBucket[d])).forEach(function (r) { allRounds[r] = true; });
+    // Cross-discipline personal bests.
+    const pbs = {};
+    disciplines.forEach(function (d) {
+      pbs[d] = {};
+      state.byBucket[d].forEach(function (e) {
+        if (!inSeason(e, state.season) || !e.round || e.score === null || e.isLadder) return;
+        if (!pbs[d][e.round] || e.score > pbs[d][e.round].score) pbs[d][e.round] = e;
+      });
     });
-    var roundList = Object.keys(allRounds).sort();
+    const roundList = Array.from(new Set([].concat.apply([], disciplines.map(function (d) { return Object.keys(pbs[d]); })))).sort();
     if (roundList.length) {
-      html += '<div class="card"><h2>Personal bests by round</h2>' +
-        '<p class="card-note">Best score for each round type, across every discipline it has been shot with.</p>';
+      html += '<div class="card"><h2>Personal bests by round</h2><p class="card-note">Best score for each round, across every bow type it has been shot with. Handicap in brackets.</p>';
       html += '<div class="table-wide-scroll"><table><thead><tr><th>Round</th>' +
-        disciplinesPresent.map(function (d) { return '<th class="num">' + d + "</th>"; }).join("") +
-        "</tr></thead><tbody>";
-      roundList.forEach(function (round) {
-        html += "<tr><td>" + escapeHtml(round) + "</td>";
-        disciplinesPresent.forEach(function (d) {
-          var pb = pbByRound(entriesByBucket[d])[round];
-          html += '<td class="num">' + (pb ? pb.score : '<span class="status-pending">-</span>') + "</td>";
+        disciplines.map(function (d) { return '<th class="num">' + d + "</th>"; }).join("") + "</tr></thead><tbody>";
+      roundList.forEach(function (r) {
+        html += "<tr><td>" + escapeHtml(r) + "</td>";
+        disciplines.forEach(function (d) {
+          const e = pbs[d][r];
+          html += '<td class="num">' + (e ? e.score + (e.hcRound !== null ? ' <span class="muted small">(' + e.hcRound + ")</span>" : "") : '<span class="status-pending">-</span>') + "</td>";
         });
         html += "</tr>";
       });
       html += "</tbody></table></div></div>";
     }
 
-    // 252 practice ladder, cross-discipline.
-    html += '<div class="card"><h2>252 practice ladder</h2>' +
-      '<p class="card-note">Badge earned once the qualifying score for that bow type and distance has been shot on ' +
-      LADDER_BADGE_COUNT + ' separate occasions. Score shown as best / qualifying score.</p>';
-    html += '<div class="table-wide-scroll"><table><thead><tr><th>Distance</th>' +
-      disciplinesPresent.map(function (d) { return '<th class="num">' + d + "</th>"; }).join("") +
-      "</tr></thead><tbody>";
-    var ladders = {};
-    disciplinesPresent.forEach(function (d) { ladders[d] = ladderStats(entriesByBucket[d], d); });
-    LADDER_DISTANCES.forEach(function (dist) {
-      html += "<tr><td>" + dist + "yds</td>";
-      disciplinesPresent.forEach(function (d) {
-        var stat = ladders[d][dist];
-        var threshold = ladderBadgeScore(d, dist);
-        var cell;
-        if (!stat) {
-          cell = '<span class="status-pending">0/' + threshold + ' &middot; Not yet</span>';
-        } else if (stat.qualifying >= LADDER_BADGE_COUNT) {
-          cell = '<span class="status-good">' + stat.best.score + '/' + threshold + ' &middot; Done</span>';
-        } else {
-          cell = '<span class="status-warn">' + stat.best.score + '/' + threshold + ' &middot; ' + stat.qualifying + " of " + LADDER_BADGE_COUNT + "</span>";
-        }
-        html += '<td class="num">' + cell + "</td>";
-      });
-      html += "</tr>";
-    });
-    html += "</tbody></table></div></div>";
-
-    if (specialEntries && specialEntries.length) {
-      html += '<div class="card"><h2>Annual &amp; club shoots</h2><p class="card-note">Entries logged without a specific bow type or round (e.g. Midsummer Madness, Spring Fling).</p>';
-      html += '<div class="table-scroll"><table><thead><tr><th>Date</th><th class="num">Score</th><th>Comment</th></tr></thead><tbody>';
-      specialEntries.slice().sort(function (a, b) { return b.date - a.date; }).forEach(function (e) {
-        html += "<tr><td>" + fmtDate(e.date) + '</td><td class="num">' + (e.score !== null ? e.score : "-") + "</td><td>" +
-          medalBadge(e.comment) + escapeHtml(e.comment) + "</td></tr>";
+    // 252 ladder (always all-time: badges, once earned, are kept).
+    const ladderDisc = disciplines.filter(function (d) { return state.byBucket[d].some(function (e) { return e.isLadder; }); });
+    if (ladderDisc.length) {
+      html += '<div class="card"><h2>252 practice ladder</h2><p class="card-note">All time. A badge is earned once the qualifying score for that bow type and distance has been shot on ' +
+        LADDER_BADGE_COUNT + " separate occasions. Cells show best score / qualifying score.</p>";
+      html += '<div class="table-wide-scroll"><table><thead><tr><th>Distance</th>' +
+        ladderDisc.map(function (d) { return '<th class="num">' + d + "</th>"; }).join("") + "</tr></thead><tbody>";
+      const ladders = {};
+      ladderDisc.forEach(function (d) { ladders[d] = ladderStats(state.byBucket[d], d); });
+      LADDER_DISTANCES.forEach(function (dist) {
+        html += "<tr><td>" + dist + " yds</td>";
+        ladderDisc.forEach(function (d) {
+          const s = ladders[d][dist];
+          const t = (LADDER_BADGE_SCORE[d] || {})[dist] || LADDER_BADGE_DEFAULT;
+          let cell;
+          if (!s) cell = '<span class="status-pending">Not attempted</span>';
+          else if (s.qualifying >= LADDER_BADGE_COUNT) cell = '<span class="status-good">' + s.best.score + "/" + t + " · Badge earned</span>";
+          else cell = '<span class="status-warn">' + s.best.score + "/" + t + " · " + s.qualifying + " of " + LADDER_BADGE_COUNT + "</span>";
+          html += '<td class="num">' + cell + "</td>";
+        });
+        html += "</tr>";
       });
       html += "</tbody></table></div></div>";
     }
 
+    if (special.length) {
+      html += '<div class="card"><h2>Annual &amp; club shoots</h2><p class="card-note">Entries logged without a bow type or round (e.g. Midsummer Madness, Spring Fling).</p>';
+      html += '<div class="table-scroll"><table><thead><tr><th>Date</th><th class="num">Score</th><th>Comment</th></tr></thead><tbody>';
+      special.slice().reverse().forEach(function (e) {
+        html += '<tr><td class="nowrap">' + fmtDate(e.date) + '</td><td class="num">' + (e.score !== null ? e.score : "-") + "</td><td>" +
+          resultBadges(e) + escapeHtml(e.comment) + "</td></tr>";
+      });
+      html += "</tbody></table></div></div>";
+    }
     return html;
   }
 
-  // ---- App bootstrap -------------------------------------------------------
-  function groupByBucket(entries) {
-    var out = {};
-    entries.forEach(function (e) {
-      if (!out[e.bucket]) out[e.bucket] = [];
-      out[e.bucket].push(e);
+  function drawOverviewCharts() {
+    const surface = cssVar("--surface-1");
+    const datasets = [], xs = [];
+    state.disciplines.forEach(function (d) {
+      const color = cssVar(DISCIPLINE_COLOR[d]);
+      const pts = state.byBucket[d].filter(function (e) { return e.hcRunning !== null && inSeason(e, state.season); })
+        .map(function (e) { return { x: e.date.getTime(), y: e.hcRunning, entry: e }; });
+      if (!pts.length) return;
+      pts.forEach(function (p) { xs.push(p.x); });
+      datasets.push({
+        label: d, data: pts, borderColor: color, backgroundColor: color, pointBackgroundColor: color, pointBorderColor: surface,
+        pointBorderWidth: 1.5, pointRadius: 3, pointHoverRadius: 6, borderWidth: 2, stepped: "before"
+      });
     });
-    return out;
-  }
-
-  function showTab(id) {
-    document.querySelectorAll("nav.tabs button").forEach(function (b) {
-      b.classList.toggle("active", b.dataset.tab === id);
-    });
-    document.querySelectorAll(".panel").forEach(function (p) {
-      p.classList.toggle("active", p.id === "panel-" + id);
-    });
-  }
-
-  function render(entries) {
-    var byBucket = groupByBucket(entries);
-    var special = byBucket["Special"] || [];
-    var other = byBucket["Other"] || [];
-    if (other.length) special = special.concat(other);
-
-    var disciplines = DISCIPLINE_ORDER.filter(function (d) { return byBucket[d] && byBucket[d].length; });
-    lastEntriesByBucket = {};
-    disciplines.forEach(function (d) { lastEntriesByBucket[d] = byBucket[d]; });
-
-    var tabsEl = document.getElementById("tabs");
-    var panelsEl = document.getElementById("panels");
-    var tabDefs = [{ id: "overview", label: "Overview" }].concat(
-      disciplines.map(function (d) { return { id: d.toLowerCase(), label: d }; })
-    );
-
-    tabsEl.innerHTML = tabDefs.map(function (t) {
-      return '<button data-tab="' + t.id + '">' + t.label + "</button>";
-    }).join("");
-    tabsEl.style.display = "flex";
-    tabsEl.querySelectorAll("button").forEach(function (b) {
-      b.addEventListener("click", function () { showTab(b.dataset.tab); });
-    });
-
-    var panelsHtml = '<section class="panel" id="panel-overview">' + buildOverviewPanel(lastEntriesByBucket, special) + "</section>";
-    var disciplinePanels = {};
-    disciplines.forEach(function (d) {
-      var built = buildDisciplinePanel(d, byBucket[d]);
-      disciplinePanels[d] = built;
-      panelsHtml += '<section class="panel" id="panel-' + d.toLowerCase() + '">' + built.html + "</section>";
-    });
-    panelsEl.innerHTML = panelsHtml;
-
-    disciplines.forEach(function (d) {
-      renderDisciplineTable(d, byBucket[d], "");
-      var sel = document.getElementById("filter-" + d);
-      if (sel) {
-        sel.addEventListener("change", function () {
-          renderDisciplineTable(d, byBucket[d], sel.value);
-        });
-      }
-    });
-
-    showTab("overview");
-    try {
-      renderAllCharts();
-    } catch (err) {
-      // Charting is decoration on top of the real data, which is already on the
-      // page at this point -- never let a charting bug present itself as a
-      // failure to load the spreadsheet.
-      console.error("renderAllCharts failed:", err);
+    if (datasets.length) {
+      makeChart("chart-overview", {
+        type: "line", data: { datasets: datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          interaction: { mode: "nearest", intersect: false },
+          scales: {
+            x: timeAxis(xs),
+            y: {
+              reverse: true, grid: { color: cssVar("--gridline"), drawTicks: false }, border: { color: cssVar("--baseline") },
+              ticks: { color: cssVar("--text-muted"), font: { size: 11 }, padding: 6 },
+              title: { display: true, text: "Handicap (lower is better)", color: cssVar("--text-muted"), font: { size: 11 } }
+            }
+          },
+          plugins: {
+            legend: legendOpts(datasets.length > 1),
+            tooltip: Object.assign(baseTooltip(), {
+              callbacks: {
+                title: function (items) { const e = items[0] && items[0].raw && items[0].raw.entry; return e ? fmtDate(e.date) : ""; },
+                label: function (ctx) { const e = ctx.raw.entry; return [ctx.dataset.label + ": handicap " + e.hcRunning].concat(entryTooltipLines(e, "hcRound")); }
+              }
+            })
+          }
+        }
+      });
+    } else {
+      const el = document.getElementById("chart-overview");
+      if (el) el.parentNode.innerHTML = '<p class="muted">No handicaps in this view.</p>';
     }
 
-    var total = entries.length;
-    var latest = entries.length ? entries[entries.length - 1].date : null;
-    document.getElementById("statusLine").textContent =
-      total + " shoots logged" + (latest ? " · latest entry " + fmtDate(latest) : "") + " · loaded " +
-      new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  }
-
-  function showError(err, urlTried) {
-    document.getElementById("statusLine").textContent = "Could not load live data.";
-    var box = document.getElementById("loadError");
-    box.style.display = "block";
-    box.innerHTML = '<div class="error-box"><strong>Could not load the spreadsheet.</strong><br>' +
-      escapeHtml(err && err.message ? err.message : String(err)) +
-      '<br><br>Make sure the source sheet is shared as <em>"Anyone with the link can view"</em> (or published to the web via ' +
-      "File &rarr; Share &rarr; Publish to web). Tried: <code>" + escapeHtml(urlTried) + "</code></div>";
-  }
-
-  function fetchCSV(url) {
-    return fetch(url, { cache: "no-store" }).then(function (res) {
-      if (!res.ok) throw new Error("HTTP " + res.status + " fetching sheet data.");
-      return res.text();
+    // Activity: stacked monthly bars.
+    const filtered = state.entries.filter(function (e) { return inSeason(e, state.season) && DISCIPLINE_ORDER.indexOf(e.bucket) !== -1; });
+    if (!filtered.length || !document.getElementById("chart-activity")) return;
+    const first = filtered[0].date, last = filtered[filtered.length - 1].date;
+    const labels = [], keys = [];
+    const d = new Date(first.getFullYear(), first.getMonth(), 1);
+    while (d <= last) { labels.push(fmtMonth(d)); keys.push(d.getFullYear() * 12 + d.getMonth()); d.setMonth(d.getMonth() + 1); }
+    const aDatasets = state.disciplines.map(function (disc) {
+      const counts = countBy(filtered.filter(function (e) { return e.bucket === disc; }), function (e) { return e.date.getFullYear() * 12 + e.date.getMonth(); });
+      const color = cssVar(DISCIPLINE_COLOR[disc]);
+      return {
+        label: disc, data: keys.map(function (k) { return counts[k] || 0; }),
+        backgroundColor: color, borderColor: surface, borderWidth: { top: 2 }, borderSkipped: "bottom",
+        borderRadius: 3, maxBarThickness: 28
+      };
+    }).filter(function (ds) { return ds.data.some(function (v) { return v > 0; }); });
+    makeChart("chart-activity", {
+      type: "bar", data: { labels: labels, datasets: aDatasets },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: { stacked: true, grid: { display: false }, border: { color: cssVar("--baseline") },
+            ticks: { color: cssVar("--text-muted"), font: { size: 11 }, autoSkip: true, maxRotation: 0, autoSkipPadding: 12 } },
+          y: { stacked: true, beginAtZero: true, grid: { color: cssVar("--gridline"), drawTicks: false }, border: { display: false },
+            ticks: { color: cssVar("--text-muted"), font: { size: 11 }, precision: 0, padding: 6 } }
+        },
+        plugins: {
+          legend: legendOpts(aDatasets.length > 1),
+          tooltip: Object.assign(baseTooltip(), {
+            filter: function (item) { return item.raw > 0; },
+            callbacks: { label: function (ctx) { return ctx.dataset.label + ": " + ctx.raw + (ctx.raw === 1 ? " shoot" : " shoots"); } }
+          })
+        }
+      }
     });
   }
 
-  // Google's CSV export endpoints don't send permissive CORS headers, so a plain
-  // fetch() from a github.io origin gets blocked by the browser before this code
-  // ever sees a response. The Visualization API's JSON endpoint is designed for
-  // exactly this (embedding a sheet on another domain) and supports a JSONP-style
-  // callback loaded via a <script> tag, which isn't subject to CORS at all.
+  // =====================================================================
+  // Panel: kit
+  // =====================================================================
+  function buildKitPanel() {
+    const kit = state.kit || KIT_DEFAULT;
+    const bows = DISCIPLINE_ORDER.filter(function (b) { return kit[b]; });
+    let html = '<p class="card-note" style="margin:0 0 16px">Current bow setups and sight marks. Checking arrows for a new setup? Try <a href="' +
+      SPINE_FINDER_URL + '" target="_blank" rel="noopener">Spine Finder</a>.</p>';
+    if (!bows.length) return html + '<div class="card"><p class="muted">No kit recorded yet.</p></div>';
+    html += '<div class="kit-grid">';
+    bows.forEach(function (b) {
+      const k = kit[b];
+      html += '<div class="card"><h2><span class="dot" style="background:var(' + DISCIPLINE_COLOR[b] + ')" aria-hidden="true"></span>' + escapeHtml(b) + "</h2>";
+      if (k.setup && k.setup.length) {
+        html += '<dl class="kit">' + k.setup.map(function (row) {
+          return "<dt>" + escapeHtml(row[0]) + "</dt><dd>" + escapeHtml(row[1]) + (row[2] ? ' <span class="muted small">' + escapeHtml(row[2]) + "</span>" : "") + "</dd>";
+        }).join("") + "</dl>";
+      }
+      html += "<h3>Sight marks</h3>";
+      if (k.sightMarks && k.sightMarks.length) {
+        const sorted = k.sightMarks.slice().sort(function (a, b) { return distanceMetres(a[0]) - distanceMetres(b[0]); });
+        html += '<table><thead><tr><th>Distance</th><th class="num">Mark</th><th>Notes</th></tr></thead><tbody>' +
+          sorted.map(function (row) {
+            return "<tr><td>" + escapeHtml(row[0]) + '</td><td class="num">' + escapeHtml(row[1]) + '</td><td class="muted">' + escapeHtml(row[2] || "") + "</td></tr>";
+          }).join("") + "</tbody></table>";
+      } else {
+        html += '<p class="muted small">No sight marks recorded yet.</p>';
+      }
+      html += "</div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function distanceMetres(label) {
+    const m = /([\d.]+)\s*(m|metres?|meters?|y|yds?|yards?)?/i.exec(String(label));
+    if (!m) return 1e9;
+    const v = parseFloat(m[1]);
+    return m[2] && /^y/i.test(m[2]) ? v * 0.9144 : v;
+  }
+
+  function kitFromRows(rows) {
+    const kit = {};
+    rows.forEach(function (r) {
+      const bow = cleanText(r[0]), section = cleanText(r[1]), item = cleanText(r[2]), value = cleanText(r[3]), notes = cleanText(r[4]);
+      if (!bow || !item || DISCIPLINE_ORDER.indexOf(bow) === -1) return;
+      if (!kit[bow]) kit[bow] = { setup: [], sightMarks: [] };
+      if (/sight/i.test(section || "")) kit[bow].sightMarks.push([item, value || "", notes || ""]);
+      else kit[bow].setup.push([item, value || "", notes || ""]);
+    });
+    return Object.keys(kit).length ? kit : null;
+  }
+
+  // =====================================================================
+  // Rendering, tabs and deep links
+  // =====================================================================
+  function tabDefs() {
+    return [{ id: "overview", label: "Overview" }]
+      .concat(state.disciplines.map(function (d) { return { id: slug(d), label: d, disc: d }; }))
+      .concat([{ id: "kit", label: "Kit" }]);
+  }
+
+  function renderSeasonSelect() {
+    const sel = document.getElementById("seasonSelect");
+    const opts = seasonOptions(state.entries);
+    const group = function (label, keys) {
+      return keys.length ? '<optgroup label="' + label + '">' + keys.map(function (k) {
+        return '<option value="' + k + '">' + escapeHtml(seasonLabel(k)) + "</option>";
+      }).join("") + "</optgroup>" : "";
+    };
+    sel.innerHTML = '<option value="all">All time</option>' + group("Outdoor seasons", opts.outdoor) + group("Indoor seasons", opts.indoor) + group("Calendar years", opts.years);
+    const valid = ["all"].concat(opts.outdoor, opts.indoor, opts.years);
+    if (valid.indexOf(state.season) === -1) state.season = "all";
+    sel.value = state.season;
+  }
+
+  function render() {
+    destroyCharts();
+    renderSeasonSelect();
+    const tabs = tabDefs();
+    if (!tabs.some(function (t) { return t.id === state.tab; })) state.tab = "overview";
+
+    const tabsEl = document.getElementById("tabs");
+    tabsEl.innerHTML = tabs.map(function (t) {
+      const sel = t.id === state.tab;
+      const dot = t.disc ? '<span class="tab-dot" style="background:var(' + DISCIPLINE_COLOR[t.disc] + ')" aria-hidden="true"></span>' : "";
+      return '<button type="button" role="tab" id="tab-' + t.id + '" aria-controls="panel-' + t.id + '" aria-selected="' + sel + '" tabindex="' + (sel ? 0 : -1) + '" data-tab="' + t.id + '"' +
+        (t.disc ? ' style="--dot:var(' + DISCIPLINE_COLOR[t.disc] + ')"' : "") + ">" + dot + escapeHtml(t.label) + "</button>";
+    }).join("");
+    tabsEl.hidden = false;
+
+    // Only the visible panel is built, which keeps charts sized correctly.
+    const current = tabs.filter(function (t) { return t.id === state.tab; })[0];
+    let body;
+    if (current.id === "overview") body = buildOverviewPanel();
+    else if (current.id === "kit") body = buildKitPanel();
+    else body = buildDisciplinePanel(current.disc, state.byBucket[current.disc]);
+    document.getElementById("panels").innerHTML =
+      '<section class="panel" role="tabpanel" id="panel-' + current.id + '" aria-labelledby="tab-' + current.id + '">' + body + "</section>";
+
+    try {
+      if (current.id === "overview") drawOverviewCharts();
+      else if (current.disc) drawDisciplineCharts(current.disc, state.byBucket[current.disc]);
+    } catch (err) {
+      console.error("Chart drawing failed:", err);
+    }
+    document.title = (current.id === "overview" ? "" : current.label + " · ") + "Neil Fletcher: Archery Tracker";
+  }
+
+  function hashFor(tab, season) {
+    return "#" + tab + (season && season !== "all" ? "/" + season : "");
+  }
+
+  function readHash() {
+    const m = /^#([a-z0-9-]+)(?:\/([a-z]+-\d{4}))?$/.exec(location.hash || "");
+    if (!m) return { tab: "overview", season: "all" };
+    return { tab: m[1], season: m[2] || "all" };
+  }
+
+  function navigate(tab, season, push) {
+    state.tab = tab;
+    state.season = season;
+    const h = hashFor(tab, season);
+    if (location.hash !== h) {
+      try { history[push ? "pushState" : "replaceState"](null, "", h); } catch (e) { location.hash = h; }
+    }
+    if (state.entries.length) render();
+  }
+
+  window.addEventListener("popstate", function () {
+    const h = readHash();
+    state.tab = h.tab; state.season = h.season;
+    if (state.entries.length) render();
+  });
+  window.addEventListener("hashchange", function () {
+    const h = readHash();
+    if (h.tab === state.tab && h.season === state.season) return;
+    state.tab = h.tab; state.season = h.season;
+    if (state.entries.length) render();
+  });
+
+  document.getElementById("tabs").addEventListener("click", function (ev) {
+    const b = ev.target.closest("button[data-tab]");
+    if (b) navigate(b.dataset.tab, state.season, true);
+  });
+  document.getElementById("tabs").addEventListener("keydown", function (ev) {
+    const keys = { ArrowRight: 1, ArrowLeft: -1, Home: "first", End: "last" };
+    if (!(ev.key in keys)) return;
+    const buttons = Array.from(document.querySelectorAll("#tabs button[role=tab]"));
+    let i = buttons.findIndex(function (b) { return b.dataset.tab === state.tab; });
+    if (keys[ev.key] === "first") i = 0;
+    else if (keys[ev.key] === "last") i = buttons.length - 1;
+    else i = (i + keys[ev.key] + buttons.length) % buttons.length;
+    ev.preventDefault();
+    navigate(buttons[i].dataset.tab, state.season, true);
+    const next = document.getElementById("tab-" + buttons[i].dataset.tab);
+    if (next) next.focus();
+  });
+
+  document.getElementById("seasonSelect").addEventListener("change", function (ev) {
+    navigate(state.tab, ev.target.value, false);
+  });
+
+  document.getElementById("panels").addEventListener("click", function (ev) {
+    const modeBtn = ev.target.closest("button[data-mode]");
+    if (modeBtn) {
+      state.mode[modeBtn.dataset.disc] = modeBtn.dataset.mode;
+      render();
+      const again = document.querySelector('button[data-mode="' + modeBtn.dataset.mode + '"]');
+      if (again) again.focus();
+      return;
+    }
+    const nav = ev.target.closest("a[data-nav]");
+    if (nav) { ev.preventDefault(); navigate(nav.dataset.nav, state.season, true); }
+  });
+
+  document.getElementById("panels").addEventListener("change", function (ev) {
+    const t = ev.target;
+    if (t.dataset.trend) { state.trendRound[t.dataset.trend] = t.value; render(); focusSel('select[data-trend]'); }
+    else if (t.dataset.log !== undefined && t.matches("select[data-log]")) { state.logRound[t.dataset.log] = t.value; render(); focusSel('select[data-log]'); }
+    else if (t.dataset.goal) {
+      const v = num(t.value);
+      store(STORAGE.goal + t.dataset.goal, v === null ? null : String(Math.max(0, Math.min(150, Math.round(v)))));
+      render();
+      focusSel('input[data-goal]');
+    }
+  });
+
+  function focusSel(sel) { const el = document.querySelector(sel); if (el) el.focus(); }
+
+  // =====================================================================
+  // Theme
+  // =====================================================================
+  function effectiveTheme() {
+    const set = document.documentElement.getAttribute("data-theme");
+    if (set) return set;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  function updateThemeButton() {
+    const btn = document.getElementById("themeToggle");
+    const next = effectiveTheme() === "dark" ? "light" : "dark";
+    btn.textContent = next === "dark" ? "Dark theme" : "Light theme";
+    btn.setAttribute("aria-label", "Switch to " + next + " theme");
+  }
+  (function themeInit() {
+    const saved = store(STORAGE.theme);
+    if (saved === "dark" || saved === "light") document.documentElement.setAttribute("data-theme", saved);
+    updateThemeButton();
+    document.getElementById("themeToggle").addEventListener("click", function () {
+      const next = effectiveTheme() === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      store(STORAGE.theme, next);
+      updateThemeButton();
+      if (state.entries.length) render();
+    });
+    if (window.matchMedia) {
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      const onChange = function () { updateThemeButton(); if (state.entries.length) render(); };
+      if (mq.addEventListener) mq.addEventListener("change", onChange); else if (mq.addListener) mq.addListener(onChange);
+    }
+  })();
+
+  // =====================================================================
+  // Loading (JSONP from the Google Visualization endpoint) and caching
+  // =====================================================================
+  // Google's CSV export does not send CORS headers, so a fetch() from github.io
+  // is blocked. The gviz endpoint supports a JSONP callback via <script>, which
+  // is not subject to CORS.
   function loadViaJsonp(sheetId, gid, timeoutMs) {
     return new Promise(function (resolve, reject) {
-      var cbName = "__archeryGvizCb" + Date.now() + Math.floor(Math.random() * 1e6);
-      var script = document.createElement("script");
-      var done = false;
-
-      function cleanup() {
+      const cbName = "__archeryGvizCb" + Date.now() + Math.floor(Math.random() * 1e6);
+      const script = document.createElement("script");
+      let done = false;
+      const timer = setTimeout(function () { finish(new Error("Timed out waiting for the spreadsheet to respond.")); }, timeoutMs || 15000);
+      function finish(err, value) {
+        if (done) return;
+        done = true;
         clearTimeout(timer);
         try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
         if (script.parentNode) script.parentNode.removeChild(script);
+        if (err) reject(err); else resolve(value);
       }
-
-      var timer = setTimeout(function () {
-        if (done) return;
-        done = true;
-        cleanup();
-        reject(new Error("Timed out waiting for the spreadsheet to respond."));
-      }, timeoutMs || 15000);
-
       window[cbName] = function (response) {
-        if (done) return;
-        done = true;
-        cleanup();
         if (!response || response.status === "error") {
-          var msg = response && response.errors && response.errors[0] && response.errors[0].detailed_message;
-          reject(new Error(msg || "The spreadsheet returned an error."));
+          const msg = response && response.errors && response.errors[0] && response.errors[0].detailed_message;
+          finish(new Error(msg || "The spreadsheet returned an error."));
           return;
         }
-        resolve(response);
+        finish(null, response);
       };
-
-      script.onerror = function () {
-        if (done) return;
-        done = true;
-        cleanup();
-        reject(new Error("Could not load the spreadsheet script."));
-      };
-
-      // Google's tqx parser only honours responseHandler when it comes before
-      // out:json in this list; reversed, it silently falls back to the default
-      // google.visualization.Query.setResponse(...) wrapper (confirmed against
-      // the live endpoint).
+      script.onerror = function () { finish(new Error("Could not load the spreadsheet script.")); };
+      // responseHandler must come before out:json or Google ignores it.
       script.src = "https://docs.google.com/spreadsheets/d/" + sheetId + "/gviz/tq?gid=" + gid +
         "&tqx=responseHandler:" + cbName + ";out:json";
       document.head.appendChild(script);
     });
   }
 
-  // Turn a google.visualization.Query response into row-of-strings arrays, using
-  // the formatted display value (.f) where available so dates/numbers read the
-  // same way the sheet displays them. table.cols is deliberately ignored: this
-  // sheet's two header-ish rows get merged into synthetic column labels there
-  // (e.g. "Name: Date", "Neil Fletcher Category") and excluded from table.rows
-  // altogether, so real data starts at rows[0] with no header row to strip.
+  // Rows as arrays of display strings. table.cols is ignored: the sheet's two
+  // header rows are merged into synthetic column labels there and left out of
+  // table.rows, so data starts at rows[0].
   function rowsFromGviz(response) {
-    var table = response.table || { cols: [], rows: [] };
-    var cellText = function (cell) {
-      if (!cell) return "";
-      if (cell.f !== undefined && cell.f !== null) return String(cell.f);
-      if (cell.v === undefined || cell.v === null) return "";
-      return String(cell.v);
-    };
-    return (table.rows || []).map(function (r) { return (r.c || []).map(cellText); });
-  }
-
-  function loadAndRender() {
-    loadViaJsonp(SHEET_ID, SHEET_GID).then(function (response) {
-      var rows = rowsFromGviz(response);
-      var entries = buildEntriesFromRows(rows);
-      if (!entries.length) throw new Error("The sheet loaded but no data rows were found.");
-      render(entries);
-    }).catch(function (jsonpErr) {
-      // Fall back to a direct CSV fetch, in case the sheet has been published
-      // to the web (which does send permissive CORS headers for CSV output).
-      fetchCSV(CSV_URL).catch(function () {
-        return fetchCSV(CSV_URL_FALLBACK);
-      }).then(function (text) {
-        var rows = parseCSV(text);
-        var entries = buildEntriesFromRows(rows);
-        if (!entries.length) throw new Error("The sheet loaded but no data rows were found.");
-        render(entries);
-      }).catch(function () {
-        showError(jsonpErr, CSV_URL);
+    const table = response.table || { rows: [] };
+    return (table.rows || []).map(function (r) {
+      return (r.c || []).map(function (cell) {
+        if (!cell) return "";
+        if (cell.f !== undefined && cell.f !== null) return String(cell.f);
+        if (cell.v === undefined || cell.v === null) return "";
+        return String(cell.v);
       });
     });
   }
 
-  loadAndRender();
+  function setStatus(text, warn) {
+    const el = document.getElementById("statusLine");
+    el.textContent = text;
+    el.classList.toggle("warn", !!warn);
+  }
 
-  window.addEventListener("resize", function () {
-    // Chart.js handles responsive resize itself; nothing extra needed.
-  });
+  function summaryStatus(prefix) {
+    const total = state.entries.length;
+    const latest = total ? state.entries[total - 1].date : null;
+    return total + " shoots logged" + (latest ? " · latest entry " + fmtDate(latest) : "") + (prefix ? " · " + prefix : "");
+  }
+
+  function applyRows(rows) {
+    const entries = buildEntries(rows);
+    if (!entries.length) throw new Error("The sheet loaded but no data rows were found.");
+    state.entries = entries;
+    state.byBucket = {};
+    entries.forEach(function (e) { (state.byBucket[e.bucket] = state.byBucket[e.bucket] || []).push(e); });
+    state.disciplines = DISCIPLINE_ORDER.filter(function (d) { return state.byBucket[d] && state.byBucket[d].length; });
+    state.now = new Date();
+    document.getElementById("loadError").hidden = true;
+    render();
+  }
+
+  function showError(err) {
+    setStatus("Could not load live data.", true);
+    const box = document.getElementById("loadError");
+    box.hidden = false;
+    box.innerHTML = '<div class="error-box"><strong>Could not load the spreadsheet.</strong><br>' +
+      escapeHtml(err && err.message ? err.message : String(err)) +
+      '<br><br>Make sure the source sheet is shared as <em>"Anyone with the link can view"</em>. Sheet: <code>' + escapeHtml(SOURCE_VIEW_URL) + "</code></div>";
+  }
+
+  function readCache() {
+    const raw = store(STORAGE.cache);
+    if (!raw) return null;
+    try {
+      const c = JSON.parse(raw);
+      return c && Array.isArray(c.rows) ? c : null;
+    } catch (e) { return null; }
+  }
+
+  function loadAndRender() {
+    const initial = readHash();
+    state.tab = initial.tab;
+    state.season = initial.season;
+
+    const cached = readCache();
+    let cachedKey = null;
+    if (cached) {
+      try {
+        applyRows(cached.rows);
+        cachedKey = JSON.stringify(cached.rows);
+        setStatus(summaryStatus("saved copy from " + fmtDate(new Date(cached.savedAt)) + ", checking for updates…"));
+      } catch (e) { /* bad cache: ignore */ }
+    }
+
+    loadViaJsonp(SHEET_ID, SHEET_GID).then(function (response) {
+      const rows = rowsFromGviz(response);
+      if (JSON.stringify(rows) !== cachedKey) applyRows(rows);
+      else if (!state.entries.length) applyRows(rows);
+      store(STORAGE.cache, JSON.stringify({ savedAt: Date.now(), rows: rows }));
+      setStatus(summaryStatus("updated " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })));
+    }).catch(function (err) {
+      if (state.entries.length) {
+        setStatus(summaryStatus("couldn't reach the sheet, showing the copy saved " + fmtDate(new Date(cached.savedAt))), true);
+      } else {
+        showError(err);
+      }
+    });
+
+    if (KIT_SHEET_GID) {
+      loadViaJsonp(SHEET_ID, KIT_SHEET_GID).then(function (response) {
+        const kit = kitFromRows(rowsFromGviz(response));
+        if (kit) { state.kit = kit; if (state.tab === "kit" && state.entries.length) render(); }
+      }).catch(function (err) { console.warn("Kit sheet not loaded:", err); });
+    }
+  }
+
+  loadAndRender();
 })();
+
 </script>
 </body>
 </html>
