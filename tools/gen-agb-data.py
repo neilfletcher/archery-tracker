@@ -16,10 +16,10 @@ sets = [("outdoor", L.AGB_outdoor_imperial), ("outdoor", L.AGB_outdoor_metric), 
         ("indoor", L.AGB_indoor), ("indoor", L.WA_indoor), ("misc", L.misc)]
 for loc, rs in sets:
     for code, r in rs.items():
-        if loc == "misc" and not (code.startswith("misc_252") or code=="frostbite"): continue
+        pass  # all miscellaneous rounds (252s, Frostbite, 2 and 3 dozen practice rounds, Lancaster)
         scores = scheme.score_for_round(H, r, rounded_score=True).astype(int).tolist()
         # store as descending deltas to keep it compact
-        entry = {"n": r.name, "a": int(sum(p.n_arrows for p in r.passes)), "loc": "indoor" if loc == "indoor" else "outdoor", "max": int(r.max_score()),
+        entry = {"n": r.name, "a": int(sum(p.n_arrows for p in r.passes)), "loc": "indoor" if (loc == "indoor" or code.startswith("lancaster")) else "outdoor", "max": int(r.max_score()),
                  "s": scores, "cls": {}}
         for bn, b in bows.items():
           for gn, g in genders.items():

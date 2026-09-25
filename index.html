@@ -490,7 +490,22 @@
         const code = "misc_252_" + ladder[1];
         return data.rounds[code] ? code : null;
       }
-      let key = normKey(name);
+      // Practice rounds such as "3 doz 80 face metric scoring 30m" or
+      // "2 doz GNAS 5 Zone at 20yds".
+      const doz = /^\s*([23])\s*doz/i.exec(name);
+      if (doz) {
+        const dist = /(\d+)\s*(m|metres?|y|yds?|yards?)\b/i.exec(name.replace(/^\s*[23]\s*doz\w*/i, ""));
+        const face = /\b(80|122)\b/.exec(name.replace(/(\d+)\s*(m|metres?|y|yds?|yards?)\b/ig, ""));
+        if (dist) {
+          const code = "misc_" + doz[1] + "_doz_" + dist[1] + (/^m/i.test(dist[2]) ? "m" : "y") + "_" + (face ? face[1] : "122") + "cm";
+          if (data.rounds[code]) return code;
+        }
+      }
+      // Tidy common sheet wording: "Portsmouth Full Size", "FITA 18",
+      // "Compound Vegas 18 Triple face".
+      let named = String(name).replace(/full\s*size/ig, " ").replace(/\bfita\b/ig, "WA");
+      if (/^\s*compound\b/i.test(named)) { named = named.replace(/^\s*compound\b/i, " "); bowType = "Compound"; }
+      let key = normKey(named).replace(/^vegas18/, "vegas").replace(/^worcester5spot$/, "worcester5spot");
       if (ALIASES[key]) key = ALIASES[key];
       const candidates = [];
       const isTriple = /triple$/.test(key);
