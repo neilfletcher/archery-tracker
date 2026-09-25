@@ -10,7 +10,7 @@ scheme = hc.handicap_scheme("AGB")
 H = np.arange(0, 151)
 bows = {"Recurve": B.RECURVE, "Barebow": B.BAREBOW, "Compound": B.COMPOUND, "Longbow": B.LONGBOW}
 genders = {"Open": G.OPEN, "Female": G.FEMALE}
-ages = {"Adult": A.ADULT, "50+": A.OVER_50}
+ages = {"Adult": A.ADULT, "50+": A.OVER_50, "U21": A.UNDER_21, "U18": A.UNDER_18, "U16": A.UNDER_16, "U15": A.UNDER_15, "U14": A.UNDER_14, "U12": A.UNDER_12}
 out = {"rounds": {}, "classHC": {"outdoor": {}, "indoor": {}}}
 sets = [("outdoor", L.AGB_outdoor_imperial), ("outdoor", L.AGB_outdoor_metric), ("outdoor", L.WA_outdoor),
         ("indoor", L.AGB_indoor), ("indoor", L.WA_indoor), ("misc", L.misc)]
@@ -19,7 +19,7 @@ for loc, rs in sets:
         if loc == "misc" and not (code.startswith("misc_252") or code=="frostbite"): continue
         scores = scheme.score_for_round(H, r, rounded_score=True).astype(int).tolist()
         # store as descending deltas to keep it compact
-        entry = {"n": r.name, "loc": "indoor" if loc == "indoor" else "outdoor", "max": int(r.max_score()),
+        entry = {"n": r.name, "a": int(sum(p.n_arrows for p in r.passes)), "loc": "indoor" if loc == "indoor" else "outdoor", "max": int(r.max_score()),
                  "s": scores, "cls": {}}
         for bn, b in bows.items():
           for gn, g in genders.items():
@@ -37,7 +37,7 @@ for loc, rs in sets:
         out["rounds"][code] = entry
 for bn in bows:
   for gn in ["Open", "Female"]:
-    for an, key in [("Adult", "ADULT"), ("50+", "OVER_50")]:
+    for an, key in [("Adult","ADULT"),("50+","OVER_50"),("U21","UNDER_21"),("U18","UNDER_18"),("U16","UNDER_16"),("U15","UNDER_15"),("U14","UNDER_14"),("U12","UNDER_12")]:
         g = f"{key}_{gn.upper()}_{bn.upper()}"
         out["classHC"]["outdoor"].setdefault(bn, {}).setdefault(gn, {})[an] = [float(x) for x in OD[g]["class_HC"]]
         out["classHC"]["indoor"].setdefault(bn, {}).setdefault(gn, {})[an] = [float(x) for x in ID[g]["class_HC"]]
@@ -47,6 +47,6 @@ print(out["rounds"]["misc_252_20"]["n"], out["rounds"]["misc_252_20"]["s"][40:60
 # compact encode scores: first value + deltas
 for r in out["rounds"].values():
     s = r["s"]; r["s"] = [s[0]] + [s[i-1]-s[i] for i in range(1, len(s))]
-js = "/* Generated from archeryutils " + "3.0.0" + " (AGB 2023 handicap and classification scheme, open and female categories, Adult and 50+). Do not edit by hand. */\nwindow.AGB_DATA = " + json.dumps(out, separators=(",", ":")) + ";\n"
+js = "/* Generated from archeryutils " + "3.0.0" + " (AGB 2023 handicap and classification scheme, open and female categories, all age groups). Do not edit by hand. */\nwindow.AGB_DATA = " + json.dumps(out, separators=(",", ":")) + ";\n"
 open(__import__("os").path.join(__import__("os").path.dirname(__file__), "..", "agb-data.js"), "w").write(js)
 print(len(js))

@@ -7,7 +7,7 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-JF54HQGVLT');
+  gtag('config', 'G-JF54HQGVLT', { page_location: location.origin + location.pathname });
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neil Fletcher: Archery Tracker</title>
@@ -23,6 +23,8 @@
 <meta name="twitter:description" content="Handicap progression, Archery GB classifications, personal bests and kit.">
 <meta name="theme-color" content="#f9f9f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23ffffff' stroke='%23222' stroke-width='1'/%3E%3Ccircle cx='16' cy='16' r='12' fill='%23222'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%232a78d6'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23e5322d'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23f5c518'/%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js"></script>
 <!-- AGB 2023 handicap tables and classification thresholds, generated from archeryutils (see agb-data.js header). -->
@@ -230,6 +232,22 @@
   footer { color: var(--text-muted); font-size: 0.78rem; margin-top: 32px; text-align: center; line-height: 1.6; }
   footer a, .card-note a { color: var(--text-secondary); }
 
+  .badge.ev { background: transparent; color: var(--text-secondary); border: 1px solid var(--baseline); }
+  .badge.ev-pb { color: var(--success-text); border-color: var(--success-text); }
+  .badge.ev-podium { color: var(--warning-text); border-color: var(--warning-text); }
+  .est-out { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 0.95rem; }
+  details.claim-detail { margin-top: 12px; }
+  details.claim-detail summary { cursor: pointer; font-size: 0.84rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+
+  @media print {
+    body { background: #fff; color: #000; }
+    .head-controls, nav.tabs, footer, .no-print, #loadError, #connectScreen { display: none !important; }
+    body[data-printing] .panel > :not(.print-target) { display: none !important; }
+    .card { border-color: #bbb; break-inside: avoid; }
+    .table-scroll { max-height: none; overflow: visible; }
+    thead th { position: static; }
+  }
+
   @media (max-width: 560px) {
     .tile-row { grid-template-columns: repeat(2, 1fr); }
     nav.tabs button { padding: 8px 10px; font-size: 0.82rem; }
@@ -251,6 +269,7 @@
       <label class="ctl" for="seasonSelect">Show
         <select id="seasonSelect"><option value="all">All time</option></select>
       </label>
+      <button class="btn" id="shareBtn" type="button">Share</button>
       <button class="btn" id="themeToggle" type="button">Dark theme</button>
     </div>
   </header>
@@ -326,6 +345,12 @@
   const ORDER = { outdoor: OUTDOOR_ORDER, indoor: INDOOR_ORDER };
   const SHORT = { outdoor: OUTDOOR_SHORT, indoor: INDOOR_SHORT };
 
+  // Archery GB 2023 claim rules: dozens of arrows needed from qualifying
+  // scores in one season, by class (weakest first). Master Bowman tier scores
+  // must come from record-status events.
+  const CLAIM_DOZENS = { outdoor: [12, 12, 12, 18, 18, 18, 36, 36, 36], indoor: [10, 10, 10, 15, 15, 15, 15, 15] };
+  const MB_TIER_RANK = 6;
+
   const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
   const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -374,11 +399,19 @@
   }
 
   function parseDate(s) {
-    const m = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(String(s || "").trim());
-    if (!m) return null;
-    const month = MONTHS[m[2].charAt(0).toUpperCase() + m[2].slice(1).toLowerCase()];
-    if (month === undefined) return null;
-    return new Date(Number(m[3]), month, Number(m[1]));
+    const str = String(s || "").trim();
+    let y, mo, d, m;
+    if ((m = /^Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})/.exec(str))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+    else if ((m = /^(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*\.?[-\s,]+(\d{4})$/.exec(str))) {
+      mo = MONTHS[m[2].charAt(0).toUpperCase() + m[2].slice(1).toLowerCase()];
+      y = +m[3]; d = +m[1];
+    }
+    else if ((m = /^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4}|\d{2})$/.exec(str))) { d = +m[1]; mo = +m[2] - 1; y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; }
+    else if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(str))) { y = +m[1]; mo = +m[2] - 1; d = +m[3]; }
+    else return null;
+    if (mo === undefined || mo < 0 || mo > 11 || d < 1 || d > 31 || y < 1900) return null;
+    const date = new Date(y, mo, d);
+    return date.getMonth() === mo ? date : null;
   }
 
   function num(v) {
@@ -396,7 +429,7 @@
 
   function fmtDate(d) {
     if (!d) return "-";
-    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    return String(d.getDate()).padStart(2, "0") + " " + MONTH_NAMES[d.getMonth()] + " " + d.getFullYear();
   }
 
   function fmtMonth(d) {
@@ -524,6 +557,30 @@
   // 7 New Handicap, 8 Handicap round allowance, 9 Handicap adjusted score,
   // 10 Awards / comments. Any row whose first cell is not a DD-Mon-YYYY date
   // (header text, the "Name:" row, #REF! spacers) is skipped.
+  // "Bowman 3rd Class", "B3", "I-B3", "Indoor Bowman 3", "IMB", "Elite Master
+  // Bowman"... Returns { loc (null when the name doesn't say), rank }.
+  function parseClassification(raw) {
+    if (!raw) return null;
+    let t = String(raw).toLowerCase().replace(/class(ification)?/g, "").replace(/[^a-z0-9]/g, "");
+    let loc = null;
+    if (t.indexOf("indoor") === 0) { loc = "indoor"; t = t.slice(6); }
+    else if (/^i(a[123]|b[123]|mb|gmb)$/.test(t)) { loc = "indoor"; t = t.slice(1); }
+    const words = { first: "1", second: "2", third: "3", "1st": "1", "2nd": "2", "3rd": "3" };
+    t = t.replace(/(first|second|third|1st|2nd|3rd)/, function (w) { return words[w]; });
+    let code = null;
+    if (t === "emb" || t === "elitemasterbowman") code = "EMB";
+    else if (t === "gmb" || t === "grandmasterbowman") code = "GMB";
+    else if (t === "mb" || t === "masterbowman") code = "MB";
+    else {
+      const m = /^(archer|a|bowman|b)([123])$/.exec(t);
+      if (m) code = (m[1].charAt(0) === "a" ? "A" : "B") + m[2];
+    }
+    if (!code) return null;
+    const rank = OUTDOOR_SHORT.indexOf(code);
+    if (loc === null && /^(archer|bowman|master|grand|elite)/.test(String(raw).trim().toLowerCase())) loc = "outdoor";
+    return { loc: loc, rank: rank };
+  }
+
   function entryFromRow(row) {
     const date = parseDate(row[0]);
     if (!date) return null;
@@ -531,40 +588,57 @@
     const bowType = (row[2] || "").trim();
     const round = (row[3] || "").trim();
     const score = num(row[4]);
-    let classification = cleanText(row[5]);
     const comment = (row[10] || "").trim();
+    const ageGroup = ageGroupOf(category);
+    const gender = /female|lady|ladies|women|girl/i.test(category) ? "Female" : "Open";
 
     const bucket = bowType ? bowType : (round ? "Other" : "Special");
     const code = AGB.roundCode(round, bowType);
     const info = AGB.round(code);
     const ladder = LADDER_RE.exec(round);
 
+    const parsed = parseClassification(cleanText(row[5]));
     let loc = info ? info.loc : null;
-    if (!loc && classification) loc = /^indoor/i.test(classification) ? "indoor" : "outdoor";
+    if (parsed && parsed.loc && (!loc || parsed.loc !== loc)) loc = parsed.loc;
     if (!loc) loc = "outdoor"; // club shoots and unknown rounds are outdoor
 
-    let classRank = -1;
-    if (classification) {
-      classRank = ORDER[loc].indexOf(classification);
-      if (classRank === -1) {
-        const other = loc === "indoor" ? "outdoor" : "indoor";
-        if (ORDER[other].indexOf(classification) !== -1) { loc = other; classRank = ORDER[other].indexOf(classification); }
+    let classRank = parsed && parsed.rank < ORDER[loc].length ? parsed.rank : -1;
+    let classDerived = false;
+    if (classRank === -1 && code && score !== null && bowType) {
+      const thresholds = AGB.classScores(code, bowType, gender, ageGroup);
+      if (thresholds) {
+        thresholds.forEach(function (t, i) { if (t !== null && score >= t) classRank = i; });
+        classDerived = classRank >= 0;
       }
     }
+    const classification = classRank >= 0 ? ORDER[loc][classRank] : null;
 
     let hcRound = num(row[6]);
     if (hcRound === null && code && score !== null) hcRound = AGB.handicapFor(code, score);
 
     return {
       date: date, category: category, bowType: bowType, bucket: bucket,
-      ageGroup: /50\s*\+/.test(category) ? "50+" : "Adult",
-      gender: /female|lady|ladies|women/i.test(category) ? "Female" : "Open",
-      round: round, code: code, loc: loc,
+      ageGroup: ageGroup, gender: gender,
+      round: round, code: code, loc: loc, arrows: info ? info.a : null,
       isLadder: !!ladder, ladderDist: ladder ? Number(ladder[1]) : null,
-      score: score, classification: classification, classRank: classRank,
-      hcRound: hcRound, hcRunning: num(row[7]),
-      comment: comment, placing: placingOf(comment), recordStatus: /record status/i.test(comment)
+      score: score, classification: classification, classRank: classRank, classDerived: classDerived,
+      hcRound: hcRound, hcRunning: num(row[7]), hcAllowance: num(row[8]), hcAdjusted: num(row[9]),
+      comment: comment, placing: placingOf(comment), recordStatus: /record status/i.test(comment),
+      events: []
     };
+  }
+
+  // Archery GB age group from the sheet's Category text ("Male Senior",
+  // "Female 50+", "Junior U16", "Under 18 Boys" ...). Unrecognised means adult.
+  function ageGroupOf(category) {
+    const c = String(category || "");
+    if (/50\s*\+|over\s*50/i.test(c)) return "50+";
+    const m = /\bu(?:nder)?\s*-?\s*(21|18|16|15|14|12)\b/i.exec(c);
+    return m ? "U" + m[1] : "Adult";
+  }
+
+  function ageLabel(age) {
+    return age === "Adult" ? "adult" : age === "50+" ? "50+" : "under-" + age.slice(1);
   }
 
   function buildEntries(rows) {
@@ -598,6 +672,11 @@
     }
     if (e.recordStatus) html += '<span class="badge rs" title="Record status shoot">RS</span>';
     return html;
+  }
+
+  function classCell(e) {
+    if (!e.classification) return "-";
+    return escapeHtml(e.classification) + (e.classDerived ? ' <span class="muted small" title="Worked out from the score; not in your sheet">(calc.)</span>' : "");
   }
 
   function isNotable(e) { return !!(e.placing || e.recordStatus); }
@@ -771,7 +850,22 @@
   function legendOpts(show) {
     return {
       display: show, position: "top", align: "start",
-      labels: { color: cssVar("--text-secondary"), usePointStyle: true, boxWidth: 8, boxHeight: 8, font: { size: 12 }, padding: 14 }
+      labels: {
+        color: cssVar("--text-secondary"), usePointStyle: true, boxWidth: 8, boxHeight: 8, font: { size: 12 }, padding: 14,
+        generateLabels: function (chart) {
+          const items = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+          items.forEach(function (it) {
+            const ds = chart.data.datasets[it.datasetIndex];
+            if (!ds) return;
+            if (chart.config.type === "line" && ds.showLine !== false && !ds.pointRadius) {
+              it.pointStyle = "line"; it.strokeStyle = ds.borderColor; it.lineWidth = 3;
+            } else if (ds.pointStyle) {
+              it.pointStyle = ds.pointStyle;
+            }
+          });
+          return items;
+        }
+      }
     };
   }
 
@@ -954,13 +1048,65 @@
     const goal = goalFor(name);
     let html = '<div class="card" id="next-' + slug(name) + '"><div class="card-head"><div><h2>What do I need next?</h2>' +
       '<p class="card-note">Scores needed on the rounds you shoot most, using Archery GB 2023 tables for ' +
-      escapeHtml((prof.gender === "Female" ? "female " : "") + prof.age.replace("Adult", "adult") + " " + name.toLowerCase()) +
+      escapeHtml((prof.gender === "Female" ? "female " : "") + ageLabel(prof.age) + " " + name.toLowerCase()) +
       '. Bracketed numbers are points above your PB. Classifications also need enough qualifying scores in the season, and Master Bowman and above need record-status rounds.</p></div>' +
       '<label class="ctl">Target handicap <input type="number" min="0" max="150" step="1" inputmode="numeric" data-goal="' + escapeHtml(name) + '" value="' + (goal !== null ? goal : "") + '" placeholder="none"></label></div>';
     html += nextBlock(name, allEntries, "outdoor");
     html += nextBlock(name, allEntries, "indoor");
     html += "</div>";
     return html;
+  }
+
+  // =====================================================================
+  // Panel: classification claim summary
+  // =====================================================================
+  function claimBlock(name, allEntries, loc) {
+    const nowYear = loc === "indoor" ? indoorSeasonOf(state.now) : state.now.getFullYear();
+    const m = /^(out|in)-(\d{4})$/.exec(state.season);
+    let year = m && ((m[1] === "in") === (loc === "indoor")) ? Number(m[2]) : nowYear;
+    let best = bestClass(allEntries, loc, year);
+    if (!best && !m) { best = latestClass(allEntries, loc, year - 1); if (best) year = best.year; }
+    const title = seasonName(loc, year);
+    let html = "<h3>" + title + "</h3>";
+    if (!best) return html + '<p class="card-note">No classification scores in ' + title + ".</p>";
+
+    const list = entriesForClassSeason(allEntries, loc, year);
+    const rows = [];
+    for (let r = best.rank; r >= Math.max(0, best.rank - 2); r--) {
+      const mbTier = r >= MB_TIER_RANK;
+      const q = list.filter(function (e) { return e.classRank >= r && (!mbTier || e.recordStatus); });
+      const arrows = q.reduce(function (s, e) { return s + (e.arrows || 0); }, 0);
+      const need = CLAIM_DOZENS[loc][r];
+      rows.push({ rank: r, count: q.length, dozens: arrows / 12, need: need, mbTier: mbTier, unknown: q.some(function (e) { return !e.arrows; }) });
+    }
+    html += '<div class="table-wide-scroll"><table><thead><tr><th>Classification</th><th class="num">Qualifying scores</th><th class="num">Dozens shot</th><th class="num">Needed</th><th>Status</th></tr></thead><tbody>';
+    rows.forEach(function (r) {
+      const ok = r.dozens >= r.need;
+      const doz = Math.round(r.dozens * 10) / 10;
+      html += "<tr><td>" + escapeHtml(ORDER[loc][r.rank]) + (r.mbTier ? ' <span class="muted small">(record status only)</span>' : "") + '</td><td class="num">' + r.count +
+        '</td><td class="num">' + doz + (r.unknown ? "+" : "") + '</td><td class="num">' + r.need + "</td><td>" +
+        (ok ? '<span class="status-good">Enough arrows to claim</span>' : '<span class="status-warn">' + (Math.round((r.need - r.dozens) * 10) / 10) + " dozen to go</span>") + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+
+    html += '<details class="claim-detail"><summary>Qualifying scores (' + list.length + ")</summary>" +
+      '<div class="table-wide-scroll"><table><thead><tr><th>Date</th><th>Round</th><th class="num">Score</th><th>Classification</th><th class="num">Arrows</th><th>Record status</th><th>Comment</th></tr></thead><tbody>';
+    list.slice().sort(function (a, b) { return b.classRank - a.classRank || a.date - b.date; }).forEach(function (e) {
+      html += '<tr><td class="nowrap">' + fmtDate(e.date) + "</td><td>" + escapeHtml(e.round) + '</td><td class="num">' + e.score + "</td><td>" + classCell(e) +
+        '</td><td class="num">' + (e.arrows || "?") + "</td><td>" + (e.recordStatus ? "Yes" : '<span class="muted">No</span>') + "</td><td>" + escapeHtml(e.comment) + "</td></tr>";
+    });
+    html += "</tbody></table></div></details>";
+    return html;
+  }
+
+  function claimCard(name, allEntries) {
+    const id = "claim-" + slug(name);
+    return '<div class="card claim-card" id="' + id + '"><div class="card-head"><div><h2>Classification claim summary: ' + escapeHtml(name) + "</h2>" +
+      '<p class="card-note">Archery GB 2023 rules: outdoor needs 12 dozen arrows of qualifying scores in the season for the Archer tier, 18 for Bowman and 36 for Master Bowman; indoor needs 10, 15 and 15. ' +
+      "Bowman tier scores must be from competitive events and Master Bowman tier from record-status events (marked by \"record status\" in the comment). " +
+      "This summary can't tell practice from competition, so check with your records officer before claiming.</p></div>" +
+      '<button type="button" class="btn no-print" data-print="' + id + '">Print summary</button></div>' +
+      claimBlock(name, allEntries, "outdoor") + claimBlock(name, allEntries, "indoor") + "</div>";
   }
 
   // =====================================================================
@@ -1007,6 +1153,7 @@
       '<div class="chart-box"><canvas id="chart-' + id + '" role="img" aria-label="' + escapeHtml(name) + ' handicap progression chart"></canvas></div></div>';
 
     html += nextCard(name, allEntries);
+    html += claimCard(name, allEntries);
 
     // Score trend for one round.
     const roundCounts = countBy(entries.filter(function (e) { return e.score !== null && e.round; }), function (e) { return e.round; });
@@ -1048,11 +1195,12 @@
     const pbRows = Object.keys(pb).map(function (k) { return pb[k]; }).sort(function (a, b) { return b.date - a.date; });
     if (pbRows.length) {
       html += '<div class="card"><h2>Personal bests by round</h2><div class="table-scroll"><table><thead><tr>' +
-        '<th>Round</th><th class="num">Best score</th><th class="num">Handicap</th><th>Date</th><th>Classification</th></tr></thead><tbody>';
+        '<th>Round</th><th class="num">Best score</th><th class="num">Handicap</th><th>Date</th><th>Classification</th><th class="num" title="Best handicap-adjusted score (score plus handicap allowance)">Best adjusted</th></tr></thead><tbody>';
       pbRows.forEach(function (e) {
+        const adj = maxBy(entries.filter(function (x) { return x.round === e.round && x.hcAdjusted !== null; }), function (x) { return x.hcAdjusted; });
         html += "<tr><td>" + escapeHtml(e.round) + '</td><td class="num">' + e.score + '</td><td class="num">' +
           (e.hcRound !== null ? e.hcRound : "-") + '</td><td class="nowrap">' + fmtDate(e.date) + "</td><td>" +
-          escapeHtml(e.classification || "-") + "</td></tr>";
+          classCell(e) + '</td><td class="num">' + (adj ? adj.hcAdjusted : "-") + "</td></tr>";
       });
       html += "</tbody></table></div></div>";
     }
@@ -1065,13 +1213,13 @@
       rounds.map(function (r) { return '<option value="' + escapeHtml(r) + '"' + (r === lr ? " selected" : "") + ">" + escapeHtml(r) + "</option>"; }).join("") +
       "</select></label></div>";
     html += '<div class="table-scroll"><table><thead><tr>' +
-      '<th>Date</th><th>Round</th><th>Where</th><th class="num">Score</th><th>Classification</th><th class="num">Round hcp</th><th class="num">Running hcp</th><th>Comment</th>' +
+      '<th>Date</th><th>Round</th><th>Where</th><th class="num">Score</th><th>Classification</th><th class="num">Round hcp</th><th class="num">Running hcp</th><th class="num" title="Handicap-adjusted score">Adj.</th><th>Comment</th>' +
       "</tr></thead><tbody>";
     entries.slice().reverse().filter(function (e) { return !lr || e.round === lr; }).forEach(function (e) {
       html += '<tr><td class="nowrap">' + fmtDate(e.date) + "</td><td>" + escapeHtml(e.round) + '</td><td><span class="pill">' + e.loc + '</span></td><td class="num">' +
-        (e.score !== null ? e.score : "-") + "</td><td>" + escapeHtml(e.classification || "-") + '</td><td class="num">' +
-        (e.hcRound !== null ? e.hcRound : "-") + '</td><td class="num">' + (e.hcRunning !== null ? e.hcRunning : "-") + "</td><td>" +
-        resultBadges(e) + escapeHtml(e.comment) + "</td></tr>";
+        (e.score !== null ? e.score : "-") + "</td><td>" + classCell(e) + '</td><td class="num">' +
+        (e.hcRound !== null ? e.hcRound : "-") + '</td><td class="num">' + (e.hcRunning !== null ? e.hcRunning : "-") + '</td><td class="num">' +
+        (e.hcAdjusted !== null ? e.hcAdjusted : "-") + "</td><td>" + (isPB(e) ? '<span class="badge ev ev-pb">PB</span>' : "") + resultBadges(e) + escapeHtml(e.comment) + "</td></tr>";
     });
     html += "</tbody></table></div></div>";
     return html;
@@ -1292,6 +1440,19 @@
     });
     html += "</div>";
 
+    const events = [];
+    filtered.forEach(function (e) { e.events.forEach(function (ev) { events.push({ e: e, ev: ev }); }); });
+    if (events.length) {
+      html += '<div class="card"><h2>Recent achievements</h2><p class="card-note">New PBs, classification scores, 252 badges, handicap improvements and podiums, most recent first.</p>' +
+        '<div class="table-scroll" style="max-height:320px"><table><thead><tr><th>Date</th><th>What</th></tr></thead><tbody>';
+      events.slice(-40).reverse().forEach(function (x) {
+        const bow = DISCIPLINE_COLOR[x.e.bucket] ? '<span class="dot" style="background:var(' + DISCIPLINE_COLOR[x.e.bucket] + ')" aria-hidden="true"></span>' + x.e.bucket : "Club shoot";
+        html += '<tr><td class="nowrap">' + fmtDate(x.e.date) + '</td><td><span class="badge ev ev-' + x.ev.type + '">' +
+          EVENT_LABEL[x.ev.type] + "</span>" + escapeHtml(x.ev.text) + ' <span class="muted small nowrap">' + bow + "</span></td></tr>";
+      });
+      html += "</tbody></table></div></div>";
+    }
+
     html += '<div class="card"><h2>Handicap progression: all bow types</h2>';
     html += '<p class="card-note">Running handicap from the sheet for each bow type. Lower is better; the axis is inverted so an upward line means improvement.</p>';
     html += '<div class="chart-box"><canvas id="chart-overview" role="img" aria-label="Running handicap by bow type over time"></canvas></div></div>';
@@ -1388,6 +1549,14 @@
         html += "</tr>";
       });
       html += "</tbody></table></div></div>";
+    }
+
+    const unknown = countBy(filtered.filter(function (e) { return e.round && !e.code && DISCIPLINE_COLOR[e.bucket]; }), function (e) { return e.round; });
+    const unknownList = Object.keys(unknown).sort();
+    if (unknownList.length) {
+      html += '<div class="card"><h2>Rounds not recognised</h2><p class="card-note">These round names didn\'t match the Archery GB round list, so they have no calculated handicaps or classification scores. ' +
+        'Check the spelling in the sheet (for example "WA 18m", "Portsmouth", "National 50", "252 attempt at 30yds").</p><p>' +
+        unknownList.map(function (r) { return '<span class="pill">' + escapeHtml(r) + " · " + unknown[r] + "</span>"; }).join(" ") + "</p></div>";
     }
 
     if (special.length) {
@@ -1509,6 +1678,13 @@
           sorted.map(function (row) {
             return "<tr><td>" + escapeHtml(row[0]) + '</td><td class="num">' + escapeHtml(row[1]) + '</td><td class="muted">' + escapeHtml(row[2] || "") + "</td></tr>";
           }).join("") + "</tbody></table>";
+        if (sightPoints(k.sightMarks).length >= 2) {
+          html += '<div class="chart-box short" style="margin-top:14px"><canvas id="sight-' + slug(b) + '" role="img" aria-label="' + escapeHtml(b) + ' sight marks against distance"></canvas></div>' +
+            '<div class="controls-row" style="margin-top:10px"><label class="ctl">Estimate for <input type="number" min="1" max="200" step="1" data-est="' + escapeHtml(b) + '" placeholder="dist">' +
+            '<select data-est-unit="' + escapeHtml(b) + '"><option value="yds">yds</option><option value="m">m</option></select></label>' +
+            '<output class="est-out" data-est-out="' + escapeHtml(b) + '"></output></div>' +
+            '<p class="card-note">Estimates join your logged marks with straight lines (and extend the nearest two beyond them). Always confirm on the field.</p>';
+        }
       } else {
         html += '<p class="muted small">No sight marks recorded yet.</p>';
       }
@@ -1516,6 +1692,56 @@
     });
     html += "</div>";
     return html;
+  }
+
+  // Numeric sight marks as { x: metres, y: mark, label } sorted by distance.
+  function sightPoints(marks) {
+    return (marks || []).map(function (r) { return { x: distanceMetres(r[0]), y: parseFloat(String(r[1]).replace(",", ".")), label: r[0] }; })
+      .filter(function (p) { return isFinite(p.x) && p.x < 1e9 && isFinite(p.y); })
+      .sort(function (a, b) { return a.x - b.x; });
+  }
+
+  function estimateMark(points, metres) {
+    if (points.length < 2 || !isFinite(metres)) return null;
+    let i = 0;
+    while (i < points.length - 2 && metres > points[i + 1].x) i++;
+    const a = points[i], c = points[i + 1];
+    if (c.x === a.x) return a.y;
+    return a.y + (c.y - a.y) * (metres - a.x) / (c.x - a.x);
+  }
+
+  function drawKitCharts() {
+    const kit = state.kit || (typeof KIT_DEFAULT !== "undefined" ? KIT_DEFAULT : {});
+    Object.keys(kit).forEach(function (b) {
+      const pts = sightPoints(kit[b].sightMarks);
+      if (pts.length < 2) return;
+      const color = cssVar(DISCIPLINE_COLOR[b] || "--text-secondary");
+      makeChart("sight-" + slug(b), {
+        type: "line",
+        data: { datasets: [
+          { label: "Estimate", data: pts, borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, tension: 0 },
+          { label: "Logged mark", data: pts, showLine: false, pointRadius: 5, pointHoverRadius: 7, backgroundColor: cssVar("--text-muted"), borderColor: cssVar("--surface-1"), pointBorderWidth: 1.5 }
+        ] },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          scales: {
+            x: { type: "linear", grid: { color: cssVar("--gridline"), drawTicks: false }, border: { color: cssVar("--baseline") },
+              ticks: { color: cssVar("--text-muted"), font: { size: 11 }, padding: 6 },
+              title: { display: true, text: "Distance (metres)", color: cssVar("--text-muted"), font: { size: 11 } } },
+            y: { grid: { color: cssVar("--gridline"), drawTicks: false }, border: { color: cssVar("--baseline") },
+              ticks: { color: cssVar("--text-muted"), font: { size: 11 }, padding: 6 },
+              title: { display: true, text: "Sight mark", color: cssVar("--text-muted"), font: { size: 11 } } }
+          },
+          plugins: {
+            legend: legendOpts(true),
+            tooltip: Object.assign(baseTooltip(), { callbacks: {
+              title: function (items) { return items[0].raw.label + " (" + Math.round(items[0].raw.x * 10) / 10 + " m)"; },
+              label: function (ctx) { return "Mark " + ctx.raw.y; }
+            } })
+          }
+        }
+      });
+    });
   }
 
   function distanceMetres(label) {
@@ -1587,6 +1813,7 @@
     try {
       if (current.id === "overview") drawOverviewCharts();
       else if (current.disc) drawDisciplineCharts(current.disc, state.byBucket[current.disc]);
+      else if (current.id === "kit") drawKitCharts();
     } catch (err) {
       console.error("Chart drawing failed:", err);
     }
@@ -1672,6 +1899,67 @@
     }
   });
 
+  function updateEstimate(bow) {
+    const kit = state.kit || (typeof KIT_DEFAULT !== "undefined" ? KIT_DEFAULT : {});
+    const input = document.querySelector('input[data-est="' + bow + '"]');
+    const unit = document.querySelector('select[data-est-unit="' + bow + '"]');
+    const out = document.querySelector('output[data-est-out="' + bow + '"]');
+    if (!input || !out || !kit[bow]) return;
+    const d = parseFloat(input.value);
+    if (!isFinite(d) || d <= 0) { out.textContent = ""; return; }
+    const est = estimateMark(sightPoints(kit[bow].sightMarks), unit && unit.value === "yds" ? d * 0.9144 : d);
+    out.textContent = est === null ? "" : "≈ " + (Math.round(est * 100) / 100);
+  }
+
+  document.getElementById("panels").addEventListener("input", function (ev) {
+    const t = ev.target;
+    if (t.dataset.est) updateEstimate(t.dataset.est);
+    else if (t.dataset.estUnit) updateEstimate(t.dataset.estUnit);
+  });
+
+  document.getElementById("panels").addEventListener("click", function (ev) {
+    const p = ev.target.closest("button[data-print]");
+    if (!p) return;
+    const card = document.getElementById(p.dataset.print);
+    if (!card) return;
+    card.querySelectorAll("details").forEach(function (d) { d.open = true; });
+    document.body.setAttribute("data-printing", "claim");
+    card.classList.add("print-target");
+    const done = function () {
+      document.body.removeAttribute("data-printing");
+      card.classList.remove("print-target");
+      window.removeEventListener("afterprint", done);
+    };
+    window.addEventListener("afterprint", done);
+    window.print();
+  });
+
+  // Share: native share sheet on phones, otherwise copy the link.
+  (function shareInit() {
+    const btn = document.getElementById("shareBtn");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      const url = location.href;
+      if (navigator.share) {
+        navigator.share({ title: document.title, url: url }).catch(function () { /* dismissed */ });
+        return;
+      }
+      const done = function (ok) {
+        btn.textContent = ok ? "Link copied" : "Copy failed";
+        setTimeout(function () { btn.textContent = "Share"; }, 2000);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { done(true); }, function () { done(false); });
+      else done(false);
+    });
+  })();
+
+  // Installable, works offline (the sheet data is cached separately above).
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function (err) { console.warn("Service worker not registered:", err); });
+    });
+  }
+
   function focusSel(sel) { const el = document.querySelector(sel); if (el) el.focus(); }
 
   // =====================================================================
@@ -1750,6 +2038,8 @@
     return (table.rows || []).map(function (r) {
       return (r.c || []).map(function (cell) {
         if (!cell) return "";
+        // Dates come as "Date(2023,8,10)" whatever format the sheet displays.
+        if (typeof cell.v === "string" && /^Date\(/.test(cell.v)) return cell.v;
         if (cell.f !== undefined && cell.f !== null) return String(cell.f);
         if (cell.v === undefined || cell.v === null) return "";
         return String(cell.v);
@@ -1769,6 +2059,43 @@
     return total + " shoots logged" + (latest ? " · latest entry " + fmtDate(latest) : "") + (prefix ? " · " + prefix : "");
   }
 
+  function computeEvents(list, disc) {
+    const best = {}, seasonBest = {}, ladderQ = {};
+    let lowRun = null;
+    list.forEach(function (e) {
+      e.events = [];
+      if (e.round && e.score !== null) {
+        const prev = best[e.round];
+        if (prev !== undefined && e.score > prev) e.events.push({ type: "pb", text: "New PB on " + e.round + ": " + e.score + " (was " + prev + ")" });
+        if (prev === undefined || e.score > prev) best[e.round] = e.score;
+      }
+      if (e.classRank >= 0) {
+        const key = seasonOf(e);
+        if (seasonBest[key] === undefined || e.classRank > seasonBest[key]) {
+          const year = e.loc === "indoor" ? indoorSeasonOf(e.date) : e.date.getFullYear();
+          e.events.push({ type: "class", text: (seasonBest[key] === undefined ? "First" : "Higher") + " classification score of " + seasonName(e.loc, year) + ": " + e.classification });
+          seasonBest[key] = e.classRank;
+        }
+      }
+      if (e.isLadder && e.score !== null) {
+        const t = (LADDER_BADGE_SCORE[disc] || {})[e.ladderDist] || LADDER_BADGE_DEFAULT;
+        if (e.score >= t) {
+          ladderQ[e.ladderDist] = (ladderQ[e.ladderDist] || 0) + 1;
+          if (ladderQ[e.ladderDist] === LADDER_BADGE_COUNT) e.events.push({ type: "badge", text: "252 badge earned at " + e.ladderDist + " yds" });
+        }
+      }
+      if (e.hcRunning !== null) {
+        if (lowRun !== null && e.hcRunning < lowRun) e.events.push({ type: "hcp", text: "Handicap down to " + e.hcRunning + " (from " + lowRun + ")" });
+        if (lowRun === null || e.hcRunning < lowRun) lowRun = e.hcRunning;
+      }
+      if (e.placing && e.placing <= 3) e.events.push({ type: "podium", text: ordinal(e.placing) + " place" + (e.round ? " (" + e.round + ")" : "") });
+    });
+  }
+
+  const EVENT_LABEL = { pb: "PB", "class": "CLASS", badge: "252", hcp: "HCP", podium: "PODIUM" };
+
+  function isPB(e) { return e.events.some(function (ev) { return ev.type === "pb"; }); }
+
   function applyRows(rows) {
     const entries = buildEntries(rows);
     if (!entries.length) throw new Error("The sheet loaded but no data rows were found.");
@@ -1776,6 +2103,7 @@
     state.byBucket = {};
     entries.forEach(function (e) { (state.byBucket[e.bucket] = state.byBucket[e.bucket] || []).push(e); });
     state.disciplines = DISCIPLINE_ORDER.filter(function (d) { return state.byBucket[d] && state.byBucket[d].length; });
+    Object.keys(state.byBucket).forEach(function (b) { computeEvents(state.byBucket[b], b); });
     state.now = new Date();
     document.getElementById("loadError").hidden = true;
     render();
