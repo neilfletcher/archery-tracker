@@ -480,7 +480,12 @@
         .replace(/[^a-z0-9]/g, "");
     }
 
-    const ALIASES = { wa18: "wa18m", wa25: "wa25m", wa70: "wa70m", wa60: "wa60m", wa1440: "wa144090m", fita18: "wa18m", fita25: "wa25m" };
+    const ALIASES = { wa18: "wa18m", wa25: "wa25m", wa70: "wa70m", wa60: "wa60m", wa1440: "wa144090m", fita18: "wa18m", fita25: "wa25m",
+      // Pre-2023 names for rounds Archery GB has since renamed.
+      shortnational: "national50", juniornational: "national40", shortjuniornational: "national30",
+      shortwarwick: "warwick50", juniorwarwick: "warwick40", shortjuniorwarwick: "warwick30",
+      shortwestern: "western50", juniorwestern: "western40", shortjuniorwestern: "western30",
+      frostbite20m: "frostbite20" };
 
     // Map a round name as written in the sheet to an archeryutils round code.
     function roundCode(name, bowType) {
@@ -657,8 +662,29 @@
   }
 
   function buildEntries(rows) {
-    const out = [];
-    rows.forEach(function (r) { const e = entryFromRow(r); if (e) out.push(e); });
+    const all = [];
+    rows.forEach(function (r) { const e = entryFromRow(r); if (e) all.push(e); });
+    // Some scores are entered twice under old and new category names
+    // ("Gentlemen" and "Male Senior"): count them once, keeping the newer
+    // category (it says whether the archer was 50+).
+    const legacy = function (c) { return /gentlemen|ladies/i.test(c); };
+    const gender = function (c) { return /female|lady|ladies|women|girl/i.test(c) ? "F" : "M"; };
+    const dupKey = function (e) { return [+e.date, gender(e.category), e.bowType, e.round.toLowerCase(), e.score].join("|"); };
+    const keep = {};
+    all.forEach(function (e) {
+      const k = dupKey(e), prev = keep[k];
+      if (!prev || (prev.category !== e.category && legacy(prev.category) && !legacy(e.category))) keep[k] = e;
+    });
+    const out = all.filter(function (e) { const k = dupKey(e); return keep[k] === e || keep[k].category === e.category; });
+    // A score above the round's maximum is a typo in the sheet: keep the row
+    // but ignore the score (it is listed on the overview).
+    out.forEach(function (e) {
+      const info = AGB.round(e.code);
+      if (info && e.score !== null && e.score > info.max) {
+        e.badScore = e.score; e.score = null; e.hcRound = null; e.hcAdjusted = null;
+        if (e.classDerived) { e.classRank = -1; e.classification = null; e.classDerived = false; }
+      }
+    });
     out.sort(by(function (e) { return e.date; }));
     return out;
   }
@@ -1138,8 +1164,10 @@
 
     let html = '<div class="tile-row">';
     html += tile("Shoots logged", entries.length, indoorN + " indoor · " + (entries.length - indoorN) + " outdoor", colorVar);
+    const lapsed = latestRun && latestRun.date < new Date(state.now.getTime() - 365 * 864e5);
     html += tile("Running handicap", latestRun ? latestRun.hcRunning : "-",
-      lowestRun ? "lowest ever " + lowestRun.hcRunning + " · " + fmtDate(lowestRun.date) : "");
+      (lapsed ? "lapsed: no score since " + fmtDate(latestRun.date) + "<br>" : "") +
+      (lowestRun ? "lowest ever " + lowestRun.hcRunning + " · " + fmtDate(lowestRun.date) : ""));
     html += bestRoundTile(entries, "outdoor");
     html += bestRoundTile(entries, "indoor");
     html += classTile(allEntries, "outdoor");
@@ -1441,7 +1469,8 @@
       const withRun = all.filter(function (e) { return e.hcRunning !== null && inSeason(e, state.season); });
       const run = withRun.length ? withRun[withRun.length - 1].hcRunning : null;
       const lines = [];
-      if (run !== null) lines.push("Handicap " + run);
+      const lastRun = withRun.length ? withRun[withRun.length - 1] : null;
+      if (run !== null) lines.push("Handicap " + run + (lastRun && lastRun.date < new Date(state.now.getTime() - 365 * 864e5) ? ' <span class="muted" title="No score for over 12 months: Archery GB handicaps lapse after a year">(lapsed)</span>' : ""));
       if (o) lines.push(seasonName("outdoor", outYear) + ": " + escapeHtml(o.name));
       if (i) lines.push(seasonName("indoor", inYear) + ": " + escapeHtml(i.name));
       if (!o && !i) {
@@ -1568,6 +1597,11 @@
 
     const unknown = countBy(filtered.filter(function (e) { return e.round && !e.code && DISCIPLINE_COLOR[e.bucket]; }), function (e) { return e.round; });
     const unknownList = Object.keys(unknown).sort();
+    const badScores = filtered.filter(function (e) { return e.badScore; });
+    if (badScores.length) {
+      html += '<div class="card"><h2>Scores ignored</h2><p class="card-note">These scores are higher than the round allows, so they are probably typos in the sheet. They are left out of PBs, handicaps and classifications until the sheet is corrected.</p><ul>' +
+        badScores.map(function (e) { return "<li>" + fmtDate(e.date) + ": " + escapeHtml(e.round) + " " + e.badScore + ' <span class="muted">(maximum ' + AGB.round(e.code).max + ")</span></li>"; }).join("") + "</ul></div>";
+    }
     if (unknownList.length) {
       html += '<div class="card"><h2>Rounds not recognised</h2><p class="card-note">These round names didn\'t match the Archery GB round list, so they have no calculated handicaps or classification scores. ' +
         'Check the spelling in the sheet (for example "WA 18m", "Portsmouth", "National 50", "252 attempt at 30yds").</p><p>' +
