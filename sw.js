@@ -1,6 +1,6 @@
 // Offline support: keeps the page, its data tables and Chart.js available
 // without a connection. Sheet data itself is cached by the page in localStorage.
-const CACHE = "archery-tracker-v3";
+const CACHE = "archery-tracker-v4";
 const PREFIX = "archery-tracker-"; // only this site's caches: other sites share neilfletcher.github.io
 const SHELL = ["./", "agb-data.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 const CDN = ["https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js"];
