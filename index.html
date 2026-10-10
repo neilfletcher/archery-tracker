@@ -421,9 +421,21 @@
   .l252-dist div { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 6px; text-align: center; }
 
   /* ============================================================== Charts */
-  .chart-box { position: relative; height: 320px; }
-  .chart-box.short { height: 230px; }
-  .chart-box.tall { height: 360px; }
+  .chart-box { position: relative; height: clamp(250px, 24vw, 330px); }
+  .chart-box.short { height: clamp(200px, 18vw, 240px); }
+  .chart-box.tall { height: clamp(260px, 26vw, 360px); }
+  .chart-box canvas { display: block; }
+
+  /* HTML chart tooltip: glides between points */
+  .chart-tip { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; min-width: 140px; max-width: 270px;
+    background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: var(--shadow-pop); padding: 9px 12px; font-size: 0.76rem; line-height: 1.45;
+    opacity: 0; transition: opacity .14s ease, transform .18s cubic-bezier(.2,.8,.2,1); will-change: transform, opacity; }
+  .chart-tip.show { opacity: 1; }
+  .ct-title { font-weight: 650; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+  .ct-row { display: flex; align-items: baseline; gap: 7px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .ct-row i { width: 8px; height: 8px; border-radius: 50%; flex: none; transform: translateY(-1px); box-shadow: 0 0 0 2px var(--surface-1); }
+  .ct-row.sub { padding-left: 15px; color: var(--text-muted); }
   .chart-legend-note { color: var(--text-muted); font-size: 0.76rem; margin-top: 8px; }
   .legend { display: flex; gap: 6px; flex-wrap: wrap; }
   .legend button { display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 0.78rem; font-weight: 500; color: var(--text-secondary);
@@ -493,6 +505,35 @@
   footer.page-foot { color: var(--text-muted); font-size: 0.75rem; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); line-height: 1.7; }
   footer.page-foot a { color: var(--text-secondary); }
 
+  /* ============================================================ Motion */
+  .tile .value, .hero-figure, .bow-hc b, .ss-value { font-variant-numeric: tabular-nums; }
+  .reveal { opacity: 0; }
+  .reveal.in { animation: rise .6s cubic-bezier(.2,.75,.25,1) var(--d, 0ms) both; }
+  .reveal.in .spark-svg { animation: wipe 1s cubic-bezier(.3,.7,.2,1) calc(var(--d, 0ms) + 250ms) both; }
+  .reveal.in .ladder-fill { transform-origin: left center; animation: grow-x 1s cubic-bezier(.2,.8,.2,1) calc(var(--d, 0ms) + 200ms) both; }
+  .reveal.in .ladder-pin { animation: pin-in 1s cubic-bezier(.2,.8,.2,1) calc(var(--d, 0ms) + 200ms) both; }
+  .reveal.in .heat-cell { animation: fade .45s ease calc(var(--d, 0ms) + 150ms + var(--i, 0) * 9ms) both; }
+  .reveal.in .l252-step { animation: pop .42s cubic-bezier(.3,1.35,.5,1) calc(var(--d, 0ms) + 150ms + var(--i, 0) * 40ms) both; }
+  .reveal.in .bow-bar { transform-origin: top center; animation: grow-y .7s cubic-bezier(.2,.8,.2,1) calc(var(--d, 0ms) + 150ms + var(--i, 0) * 70ms) both; }
+  .reveal.in .insights li, .reveal.in .timeline li, .reveal.in .stat-strip > div { animation: rise-sm .5s cubic-bezier(.2,.75,.25,1) calc(var(--d, 0ms) + 120ms + var(--i, 0) * 55ms) both; }
+  .reveal.in .delta { animation: fade .4s ease calc(var(--d, 0ms) + 700ms) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes rise-sm { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+  @keyframes grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  @keyframes pin-in { from { left: 0; opacity: 0; } }
+  @keyframes pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+  html.theme-fade, html.theme-fade body, html.theme-fade .sidebar, html.theme-fade .topbar, html.theme-fade .card, html.theme-fade .tile,
+  html.theme-fade .btn, html.theme-fade select, html.theme-fade th, html.theme-fade td, html.theme-fade .chip, html.theme-fade .seg, html.theme-fade .legend button {
+    transition: background-color .3s ease, border-color .3s ease, color .3s ease, box-shadow .3s ease !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; }
+    .reveal.in, .reveal.in * { animation: none !important; }
+    .chart-tip { transition: opacity .1s ease; }
+  }
+
   /* Loading skeleton (first visit only). */
   .skeleton { display: grid; gap: 20px; }
   .skeleton div { height: 120px; border-radius: var(--radius-lg); background: linear-gradient(90deg, var(--surface-3) 0%, var(--surface-2) 50%, var(--surface-3) 100%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
@@ -510,6 +551,9 @@
     body[data-printing] .panel > :not(.print-target), body[data-printing] .grid > :not(.print-target) { display: none !important; }
     body[data-printing] .grid { display: block; }
     .card, .tile { box-shadow: none; border-color: #ccc; break-inside: avoid; }
+    .reveal { opacity: 1 !important; animation: none !important; transform: none !important; }
+    .reveal * { animation: none !important; }
+    .chart-tip { display: none; }
     .dot, .tab-dot, .badge, .l252-step { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .table-scroll { max-height: none; overflow: visible; }
     thead th { position: static; }
@@ -1133,10 +1177,238 @@
   function seasonName(loc, year) { return loc === "indoor" ? "Indoor " + indoorLabel(year) : "Outdoor " + year; }
 
   // =====================================================================
+  // Motion: chart entrances, card reveals, count-ups, HTML chart tooltips.
+  // Render modes: "enter" (new view: cards, numbers and charts animate in
+  // as they scroll into view), "charts" (same view, a control changed: only
+  // the charts redraw with their entrance), "none" (theme switch, live data
+  // refresh, typing in an input: everything appears in its final state).
+  // prefers-reduced-motion always means "none".
+  // =====================================================================
+  const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const EASE_OUT = function (x) { return 1 - Math.pow(1 - x, 3); };
+  const TOUCH_ONLY = !!(window.matchMedia && window.matchMedia("(hover: none)").matches);
+  if (TOUCH_ONLY) document.addEventListener("pointerdown", function (ev) {
+    if (ev.target.closest && ev.target.closest(".chart-box")) return;
+    document.querySelectorAll(".chart-tip.show").forEach(function (t) { t.classList.remove("show"); });
+  });
+  let motionObservers = [];
+  function stopMotion() {
+    motionObservers.forEach(function (o) { o.disconnect(); });
+    motionObservers = [];
+  }
+  function animMode(mode) { return REDUCED_MOTION || !("IntersectionObserver" in window) ? "none" : (mode || "enter"); }
+
+  // Line charts draw on from left to right (a clip that widens over the plot)
+  // while reference lines fade in. Bars use Chart.js's own staggered growth.
+  const revealPlugin = {
+    id: "reveal",
+    beforeDatasetsDraw: function (chart) {
+      const r = chart.$reveal;
+      if (!r || r.p >= 1) return;
+      const a = chart.chartArea;
+      chart.ctx.save();
+      chart.ctx.beginPath();
+      chart.ctx.rect(a.left - 8, 0, (a.right - a.left + 16) * r.p, chart.height);
+      chart.ctx.clip();
+      r.clipped = true;
+    },
+    afterDatasetsDraw: function (chart) {
+      const r = chart.$reveal;
+      if (r && r.clipped) { chart.ctx.restore(); r.clipped = false; }
+    }
+  };
+  function runReveal(chart, duration) {
+    const r = chart.$reveal = { p: 0, raf: 0, dead: false };
+    const t0 = performance.now();
+    const step = function (t) {
+      if (r.dead) return;
+      const x = Math.min(1, (t - t0) / duration);
+      r.p = EASE_OUT(x);
+      chart.draw();
+      if (x < 1) r.raf = requestAnimationFrame(step);
+      else settle(chart);
+    };
+    r.raf = requestAnimationFrame(step);
+  }
+  // After the entrance, data changes (legend toggles) animate smoothly.
+  function settle(chart) {
+    chart.options.animation = { duration: 450, easing: "easeOutCubic" };
+  }
+
+  // Vertical guide at the hovered point on line charts (drawn under the data).
+  const crosshairPlugin = {
+    id: "crosshair",
+    beforeDatasetsDraw: function (chart) {
+      const act = chart.tooltip && chart.tooltip.getActiveElements ? chart.tooltip.getActiveElements() : [];
+      if (!act.length) return;
+      const x = act[0].element.x, a = chart.chartArea, ctx = chart.ctx;
+      if (x < a.left || x > a.right) return;
+      ctx.save();
+      ctx.strokeStyle = cssVar("--baseline");
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, a.top); ctx.lineTo(Math.round(x) + 0.5, a.bottom); ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  // HTML tooltip that glides between points. Text is set with textContent.
+  function externalTooltip(context) {
+    const chart = context.chart, tt = context.tooltip;
+    const box = chart.canvas.parentNode;
+    if (!box) return;
+    let el = box.querySelector(".chart-tip");
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "chart-tip";
+      el.setAttribute("aria-hidden", "true");
+      box.appendChild(el);
+    }
+    if (!tt || tt.opacity === 0) { el.classList.remove("show"); return; }
+    el.textContent = "";
+    if (tt.title && tt.title.length && tt.title.join("")) {
+      const h = document.createElement("div");
+      h.className = "ct-title";
+      h.textContent = tt.title.join(" ");
+      el.appendChild(h);
+    }
+    (tt.body || []).forEach(function (b, i) {
+      const c = tt.labelColors && tt.labelColors[i];
+      const swatch = c ? (c.backgroundColor && c.backgroundColor !== "transparent" ? c.backgroundColor : c.borderColor) : null;
+      [].concat(b.before || [], b.lines || [], b.after || []).forEach(function (line, j) {
+        const row = document.createElement("div");
+        row.className = "ct-row" + (j ? " sub" : "");
+        if (!j && swatch) { const s = document.createElement("i"); s.style.background = swatch; row.appendChild(s); }
+        const t = document.createElement("span"); t.textContent = line; row.appendChild(t);
+        el.appendChild(row);
+      });
+    });
+    const bw = box.clientWidth, bh = box.clientHeight, w = el.offsetWidth, h = el.offsetHeight;
+    let x = tt.caretX + 16;
+    if (x + w > bw) x = tt.caretX - w - 16;
+    x = Math.max(0, Math.min(bw - w, x));
+    const y = Math.max(0, Math.min(bh - h, tt.caretY - h / 2));
+    if (!el.classList.contains("show")) {
+      // First appearance: place it without gliding in from the corner.
+      el.style.transition = "none";
+      el.style.transform = "translate(" + x + "px," + y + "px)";
+      void el.offsetWidth;
+      el.style.transition = "";
+      el.classList.add("show");
+    } else {
+      el.style.transform = "translate(" + x + "px," + y + "px)";
+    }
+  }
+
+  // Shared chart polish: font, hover, tooltip, responsive axis titles.
+  function polishConfig(el, config) {
+    const o = config.options = config.options || {};
+    config.plugins = config.plugins || [];
+    o.responsive = true;
+    o.maintainAspectRatio = false;
+    o.hover = o.interaction || { mode: "nearest", intersect: false };
+    o.transitions = { active: { animation: { duration: 160 } } };
+    // Touch screens: tap a point to see it; the tooltip stays until you tap elsewhere.
+    if (TOUCH_ONLY) o.events = ["touchstart", "touchmove", "click"];
+    o.plugins = o.plugins || {};
+    if (o.plugins.tooltip) { o.plugins.tooltip.enabled = false; o.plugins.tooltip.external = externalTooltip; }
+    if (config.type === "line") config.plugins.unshift(crosshairPlugin);
+    const narrow = function (w) { return w < 480; };
+    const fit = function (chart, width) {
+      const y = chart.options.scales && chart.options.scales.y;
+      if (!y || !y.title || !y.title.text) return false;
+      const want = !narrow(width);
+      if (y.title.display === want) return false;
+      y.title.display = want;
+      if (y.ticks) y.ticks.maxTicksLimit = want ? 9 : 6;
+      return true;
+    };
+    const y0 = o.scales && o.scales.y;
+    if (y0 && y0.title && y0.title.text) { y0.title.display = !narrow(el.parentNode.clientWidth); y0.ticks = Object.assign({}, y0.ticks, { maxTicksLimit: y0.title.display ? 9 : 6 }); }
+    o.onResize = function (chart, size) { if (fit(chart, size.width)) chart.update("none"); };
+  }
+
+  // Wait until a chart scrolls into view (and its card has started fading in)
+  // before drawing it with its entrance.
+  function whenVisible(target, fn) {
+    const io = new IntersectionObserver(function (ents) {
+      if (!ents.some(function (e) { return e.isIntersecting; })) return;
+      io.disconnect();
+      // If the card is still fading in, start just after it has begun.
+      const card = target.closest(".reveal.in");
+      const at = card ? Number(card.dataset.inAt || 0) + Math.min(parseFloat(card.style.getPropertyValue("--d")) || 0, 240) + 140 : 0;
+      setTimeout(fn, Math.max(0, at - performance.now()));
+    }, { threshold: 0.2 });
+    io.observe(target);
+    motionObservers.push(io);
+  }
+
+  // Counting numbers (KPI values, hero figures): only plain numbers count.
+  function countUp(el, delay) {
+    if (!el) return;
+    const node = Array.from(el.childNodes).filter(function (n) { return n.nodeType === 3 && n.nodeValue.trim(); })[0];
+    if (!node) return;
+    const m = /^(\s*~?)(\d{1,3}(?:,\d{3})*|\d+)(\s*)$/.exec(node.nodeValue);
+    if (!m) return;
+    const target = Number(m[2].replace(/,/g, ""));
+    if (!isFinite(target) || target < 2) return;
+    const grouped = m[2].indexOf(",") !== -1;
+    const fmt = function (v) { const n = Math.round(v); return grouped ? n.toLocaleString("en-GB") : String(n); };
+    const final = node.nodeValue;
+    node.nodeValue = m[1] + fmt(0) + m[3];
+    setTimeout(function () {
+      const t0 = performance.now(), dur = 900;
+      const step = function (t) {
+        if (!node.isConnected) return;
+        const x = Math.min(1, (t - t0) / dur);
+        node.nodeValue = x < 1 ? m[1] + fmt(target * EASE_OUT(x)) + m[3] : final;
+        if (x < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }, delay);
+  }
+
+  // Cards rise in, staggered, as they enter the viewport.
+  function setupEntrance(panel) {
+    const items = panel.querySelectorAll(":scope > .grid > .col > .card, :scope > .tile-row > .tile, :scope > .card, :scope > .section-title");
+    items.forEach(function (el) {
+      el.querySelectorAll(".insights li, .timeline li, .stat-strip > div, .bow-list > .bow-row").forEach(function (li, i) { li.style.setProperty("--i", Math.min(i, 10)); });
+    });
+    const io = new IntersectionObserver(function (ents) {
+      let k = 0;
+      ents.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        const el = en.target, d = Math.min(k++ * 70, 420);
+        el.style.setProperty("--d", d + "ms");
+        el.dataset.inAt = String(performance.now());
+        el.classList.add("in");
+        io.unobserve(el);
+        el.querySelectorAll(".tile .value, .hero-figure, .bow-hc b, .ss-value").forEach(function (v) { countUp(v, d + 120); });
+        if (el.matches(".tile")) countUp(el.querySelector(".value"), d + 120);
+      });
+    }, { threshold: 0.06, rootMargin: "0px 0px -6% 0px" });
+    items.forEach(function (el) { el.classList.add("reveal"); io.observe(el); });
+    motionObservers.push(io);
+  }
+
+  // Brief colour cross-fade when switching theme.
+  function themeFade() {
+    if (REDUCED_MOTION) return;
+    const root = document.documentElement;
+    root.classList.add("theme-fade");
+    clearTimeout(themeFade.t);
+    themeFade.t = setTimeout(function () { root.classList.remove("theme-fade"); }, 380);
+  }
+
+  // =====================================================================
   // Chart helpers
   // =====================================================================
   let chartInstances = [];
-  function destroyCharts() { chartInstances.forEach(function (c) { c.destroy(); }); chartInstances = []; }
+  function destroyCharts() {
+    stopMotion();
+    chartInstances.forEach(function (c) { if (c.$reveal) { c.$reveal.dead = true; cancelAnimationFrame(c.$reveal.raf); } c.destroy(); });
+    chartInstances = [];
+  }
 
   // Month-aligned ticks for a plain linear (epoch ms) axis, so labels land on
   // the 1st of a month without needing a date-adapter library.
@@ -1186,6 +1458,8 @@
       ctx.font = "500 11px Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
+      if (chart.$reveal && chart.$reveal.p < 1) ctx.globalAlpha = Math.min(1, chart.$reveal.p * 1.4);
+      const alpha = ctx.globalAlpha;
       lines.forEach(function (ln) {
         const py = y.getPixelForValue(ln.value);
         if (py < area.top - 0.5 || py > area.bottom + 0.5) return;
@@ -1197,9 +1471,9 @@
         const text = ln.label;
         const w = ctx.measureText(text).width;
         ctx.fillStyle = cssVar("--surface-1");
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = 0.85 * alpha;
         ctx.fillRect(area.right - w - 8, py - 15, w + 6, 14);
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = alpha;
         ctx.fillStyle = ln.textColor || cssVar("--text-muted");
         ctx.fillText(text, area.right - 5, py - 2);
       });
@@ -1237,19 +1511,43 @@
     };
   }
 
+  // Draws a chart. In "enter" and "charts" modes it waits until the chart is
+  // on screen, then animates it in; in "none" mode it appears at once.
   function makeChart(canvasId, config) {
     const el = document.getElementById(canvasId);
     if (!el || typeof Chart === "undefined") return null;
-    try {
-      const chart = new Chart(el.getContext("2d"), config);
-      chartInstances.push(chart);
-      return chart;
-    } catch (err) {
-      // A chart failure must not look like a data-load failure.
-      console.error("Chart render failed for #" + canvasId + ":", err);
-      el.insertAdjacentHTML("afterend", '<p class="card-note">Could not draw this chart (' + escapeHtml(err && err.message ? err.message : String(err)) + ").</p>");
-      return null;
-    }
+    polishConfig(el, config);
+    const animate = state.anim !== "none";
+    const build = function () {
+      if (!el.isConnected) return null;
+      if (config.$prep) config.$prep();
+      const o = config.options;
+      if (animate && config.type === "bar") {
+        const n = (config.data.labels || []).length || 1, step = Math.min(22, 700 / n);
+        o.animation = {
+          duration: 650, easing: "easeOutQuart",
+          delay: function (c) { return c.type === "data" && c.mode === "default" ? Math.round(c.dataIndex * step + c.datasetIndex * 40) : 0; },
+          onComplete: function (ev) { settle(ev.chart); }
+        };
+      } else {
+        o.animation = false;
+        if (animate) config.plugins.unshift(revealPlugin);
+      }
+      try {
+        const chart = new Chart(el.getContext("2d"), config);
+        chartInstances.push(chart);
+        if (animate && config.type !== "bar") runReveal(chart, config.type === "scatter" ? 700 : 1100);
+        else if (!animate) settle(chart);
+        return chart;
+      } catch (err) {
+        // A chart failure must not look like a data-load failure.
+        console.error("Chart render failed for #" + canvasId + ":", err);
+        el.insertAdjacentHTML("afterend", '<p class="card-note">Could not draw this chart (' + escapeHtml(err && err.message ? err.message : String(err)) + ").</p>");
+        return null;
+      }
+    };
+    if (animate) { whenVisible(el.parentNode, build); return null; }
+    return build();
   }
 
   function entryTooltipLines(e, hcField) {
@@ -1858,7 +2156,7 @@
       });
     });
     if (datasets.length) {
-      makeChart("chart-overview", {
+      const ovConfig = {
         type: "line", data: { datasets: datasets },
         options: {
           responsive: true, maintainAspectRatio: false, animation: false,
@@ -1881,7 +2179,10 @@
             })
           }
         }
-      });
+      };
+      // Legend choices made before the chart scrolled into view still apply.
+      Object.defineProperty(ovConfig, "$prep", { value: function () { datasets.forEach(function (ds) { ds.hidden = !!(state.hiddenBows && state.hiddenBows[ds.label]); }); } });
+      makeChart("chart-overview", ovConfig);
     } else {
       const el = document.getElementById("chart-overview");
       if (el) el.parentNode.innerHTML = '<p class="muted">No handicaps in this view.</p>';
@@ -2206,7 +2507,7 @@
     const q = mine.quiver[0], qp = club ? pos(club.quiver, state.club.me) : null;
     rowsHtml += "<tr><td>Quiver Shiver</td><td>" + (q ? q.count + " of 4 rounds" : '<span class="muted">-</span>') + '</td><td class="num">-</td><td class="num">' + (q ? "<strong>" + q.total + "</strong>" : "-") +
       '</td><td class="num">' + (qp ? ordinal(qp.p) + ' <span class="muted small">of ' + qp.of + "</span>" : '<span class="muted">-</span>') + "</td></tr>";
-    return '<div class="card"><div class="card-eyebrow">' + ICON.trend + 'Winter leagues</div><h2>Season ' + w.year + "/" + String(w.year + 1).slice(2) + (w.current ? "" : " (last season)") + '</h2><p class="card-note">Best single score on each league round from ' + fmtDate(range.from) + " to " + fmtDate(range.to) +
+    return '<div class="card" id="card-leagues"><div class="card-eyebrow">' + ICON.trend + 'Winter leagues</div><h2>Season ' + w.year + "/" + String(w.year + 1).slice(2) + (w.current ? "" : " (last season)") + '</h2><p class="card-note">Best single score on each league round from ' + fmtDate(range.from) + " to " + fmtDate(range.to) +
       " (clocks back to clocks forward), adjusted for bow type as the club's leagues are; recurve is unchanged. The Quiver Shiver adds each round's best score plus the handicap allowance. " +
       (club ? "Positions are among club members on the <a href=\"" + RECORDS_SITE + "#leagues\" target=\"_blank\" rel=\"noopener\">club records site</a>." : "") + "</p>" +
       '<div class="table-wide-scroll"><table><thead><tr><th>League</th><th>Bow</th><th class="num">Best</th><th class="num">Adjusted</th><th class="num">Position</th></tr></thead><tbody>' + rowsHtml + "</tbody></table></div></div>";
@@ -2221,7 +2522,7 @@
     const cb = "__trkClub" + Date.now();
     const s = document.createElement("script");
     const done = function () { try { delete window[cb]; } catch (e) { window[cb] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); };
-    const timer = setTimeout(function () { done(); state.club = { error: true }; if (state.tab === "overview" && state.entries.length) render(); }, 30000);
+    const timer = setTimeout(function () { done(); state.club = { error: true }; refreshClubCards(); }, 30000);
     window[cb] = function (res) {
       clearTimeout(timer); done();
       if (!res || !res.ok || !Array.isArray(res.archers)) { state.club = { error: true }; }
@@ -2230,17 +2531,49 @@
         const me = members.filter(function (m) { return m.name && xNorm(m.name) === xNorm(name); })[0];
         state.club = { members: members, me: me ? me.id : null };
       }
-      if (state.tab === "overview" && state.entries.length) render();
+      refreshClubCards();
     };
-    s.onerror = function () { clearTimeout(timer); done(); state.club = { error: true }; };
+    s.onerror = function () { clearTimeout(timer); done(); state.club = { error: true }; refreshClubCards(); };
     s.src = CLUB_SERVICE + "?action=data&callback=" + cb;
     document.head.appendChild(s);
   }
+  // The club service answers after the page has drawn: swap just its two
+  // cards so nothing else re-renders (and entrance animations carry on).
+  function refreshClubCards() {
+    if (state.tab !== "overview" || !state.entries.length) return;
+    [["card-leagues", winterLeagueCard()], ["card-club", clubRecordsCard()]].forEach(function (x) {
+      const old = document.getElementById(x[0]);
+      if (!old) return;
+      const colEl = old.parentNode;
+      if (!x[1]) {
+        const row = colEl.parentNode;
+        colEl.remove();
+        row.querySelectorAll(":scope > .col").forEach(function (c) { c.className = c.className.replace(/span-\d+/, "span-12"); });
+        return;
+      }
+      const tmp = document.createElement("div");
+      tmp.innerHTML = x[1];
+      const card = tmp.firstElementChild;
+      if (old.classList.contains("reveal")) {
+        card.classList.add("reveal");
+        if (old.classList.contains("in")) { card.classList.add("in"); card.style.animation = "none"; }
+        else {
+          const io = new IntersectionObserver(function (ents) {
+            if (!ents[0].isIntersecting) return;
+            io.disconnect(); card.classList.add("in");
+          }, { threshold: 0.06 });
+          io.observe(card); motionObservers.push(io);
+        }
+      }
+      old.replaceWith(card);
+      if (old.classList.contains("in")) requestAnimationFrame(function () { card.animate([{ opacity: 0.4 }, { opacity: 1 }], { duration: 300, easing: "ease-out" }); });
+    });
+  }
   function clubRecordsCard() {
     if (!archerName()) return "";
-    if (!state.club) return '<div class="card"><h2>Club records</h2><p class="muted">Checking the club records…</p></div>';
+    if (!state.club) return '<div class="card" id="card-club"><div class="card-eyebrow">' + ICON.badge + 'Duston Bowmen</div><h2>Club records</h2><p class="muted">Checking the club records…</p><div class="skeleton" aria-hidden="true" style="margin-top:14px"><div style="height:160px"></div></div></div>';
     if (state.club.error) return "";
-    if (!state.club.me) return '<div class="card"><h2>Club records</h2><p class="card-note">This archer isn\'t shown on the <a href="' + RECORDS_SITE + '" target="_blank" rel="noopener">club records site</a> (not found there, or they have asked not to be named), so club records and league positions aren\'t shown here.</p></div>';
+    if (!state.club.me) return '<div class="card" id="card-club"><h2>Club records</h2><p class="card-note">This archer isn\'t shown on the <a href="' + RECORDS_SITE + '" target="_blank" rel="noopener">club records site</a> (not found there, or they have asked not to be named), so club records and league positions aren\'t shown here.</p></div>';
     const best = {};
     state.club.members.forEach(function (m) {
       m.entries.forEach(function (e) {
@@ -2252,7 +2585,7 @@
     });
     const held = Object.keys(best).map(function (k) { return best[k]; }).filter(function (r) { return r.id === state.club.me; })
       .sort(function (a, b) { return a.e.loc.localeCompare(b.e.loc) || a.e.bucket.localeCompare(b.e.bucket) || b.e.date - a.e.date; });
-    let html = '<div class="card"><div class="card-eyebrow">' + ICON.badge + 'Duston Bowmen</div><h2>Club records held</h2><p class="card-note">Current club records (best score on each round for each bow type, men and women separately, indoor and outdoor) held by this archer, from the <a href="' + RECORDS_SITE + '" target="_blank" rel="noopener">club records site</a>.</p>';
+    let html = '<div class="card" id="card-club"><div class="card-eyebrow">' + ICON.badge + 'Duston Bowmen</div><h2>Club records held</h2><p class="card-note">Current club records (best score on each round for each bow type, men and women separately, indoor and outdoor) held by this archer, from the <a href="' + RECORDS_SITE + '" target="_blank" rel="noopener">club records site</a>.</p>';
     if (!held.length) return html + '<p class="muted">No club records held at the moment.</p></div>';
     html += '<div class="table-scroll"><table><thead><tr><th>Round</th><th>Category</th><th class="num">Score</th><th>Since</th></tr></thead><tbody>' +
       held.map(function (r) {
@@ -2397,7 +2730,7 @@
     const area = line + " L" + pts[pts.length - 1][0].toFixed(1) + " " + (h - 1) + " L" + pts[0][0].toFixed(1) + " " + (h - 1) + " Z";
     const end = pts[pts.length - 1];
     const color = "var(" + colorVar + ")";
-    return '<svg viewBox="0 0 ' + w + " " + h + '" width="100%" height="' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+    return '<svg class="spark-svg" viewBox="0 0 ' + w + " " + h + '" width="100%" height="' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
       '<path d="' + area + '" fill="' + color + '" opacity="0.1"/>' +
       '<path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
       '<circle cx="' + end[0].toFixed(1) + '" cy="' + end[1].toFixed(1) + '" r="3.5" fill="' + color + '" stroke="var(--surface-1)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>';
@@ -2636,7 +2969,7 @@
         if (n) { days++; shoots += n; }
         const lvl = n === 0 ? 0 : Math.min(4, n + 1);
         const tipSub = n ? list.map(function (e) { return (e.round || "Club shoot") + (e.score !== null ? " " + e.score : "") + (e.bucket && DISCIPLINE_COLOR[e.bucket] ? " (" + e.bucket.toLowerCase() + ")" : ""); }).join(" · ") : "No shoots";
-        svg += '<rect class="heat-cell" x="' + (left + wk * (cell + gap)) + '" y="' + (top + dow * (cell + gap)) + '" width="' + cell + '" height="' + cell + '" rx="2.5" fill="var(--heat-' + lvl + ')"' +
+        svg += '<rect class="heat-cell" x="' + (left + wk * (cell + gap)) + '" y="' + (top + dow * (cell + gap)) + '" width="' + cell + '" height="' + cell + '" rx="2.5" fill="var(--heat-' + lvl + ')" style="--i:' + wk + '"' +
           ' data-tip="' + escapeHtml(fmtDate(d) + (n ? " · " + plural(n, "shoot") : "")) + '" data-tip-sub="' + escapeHtml(tipSub) + '"/>';
       }
     }
@@ -2694,14 +3027,15 @@
     const discs = state.disciplines.filter(function (d) { return state.byBucket[d].some(function (e) { return e.isLadder; }); });
     if (!discs.length) return "";
     let earned = 0;
-    const rows = discs.map(function (d) {
+    const rows = discs.map(function (d, row) {
       const st = ladderStats(state.byBucket[d], d);
-      const steps = LADDER_DISTANCES.map(function (dist) {
+      const steps = LADDER_DISTANCES.map(function (dist, ci) {
+        const wave = ' style="--i:' + (ci + row * 2) + '"';
         const s = st[dist], t = (LADDER_BADGE_SCORE[d] || {})[dist] || LADDER_BADGE_DEFAULT;
-        if (!s) return '<span class="l252-step" data-tip="' + dist + ' yds" data-tip-sub="Not attempted yet"></span>';
+        if (!s) return '<span class="l252-step"' + wave + ' data-tip="' + dist + ' yds" data-tip-sub="Not attempted yet"></span>';
         const done = s.qualifying >= LADDER_BADGE_COUNT;
         if (done) earned++;
-        return '<span class="l252-step ' + (done ? "done" : "part") + '" style="--step-color:var(' + DISCIPLINE_COLOR[d] + ')" tabindex="0" data-tip="' + dist + " yds · " + (done ? "badge earned" : s.qualifying + " of " + LADDER_BADGE_COUNT + " qualifying") +
+        return '<span class="l252-step ' + (done ? "done" : "part") + '" style="--i:' + (ci + row * 2) + ';--step-color:var(' + DISCIPLINE_COLOR[d] + ')" tabindex="0" data-tip="' + dist + " yds · " + (done ? "badge earned" : s.qualifying + " of " + LADDER_BADGE_COUNT + " qualifying") +
           '" data-tip-sub="Best ' + s.best.score + " of " + t + " needed · " + plural(s.attempts, "attempt") + '">' + (done ? "✓" : s.best.score) + "</span>";
       }).join("");
       return '<div class="l252-row"><span class="l252-name"><i class="dot" style="background:var(' + DISCIPLINE_COLOR[d] + ')"></i>' + d + '</span><span class="l252-track">' + steps + "</span></div>";
@@ -2899,8 +3233,9 @@
       ]) + "</div>";
   }
 
-  function render() {
+  function render(mode) {
     destroyCharts();
+    state.anim = animMode(mode);
     if (typeof Chart !== "undefined") {
       Chart.defaults.font.family = '"Inter", system-ui, -apple-system, "Segoe UI", sans-serif';
       Chart.defaults.color = cssVar("--text-muted");
@@ -2937,6 +3272,7 @@
     else body = buildDisciplinePanel(current.disc, state.byBucket[current.disc]);
     document.getElementById("panels").innerHTML =
       '<section class="panel" role="tabpanel" id="panel-' + current.id + '" aria-labelledby="tab-' + current.id + '">' + body + "</section>";
+    if (state.anim === "enter") setupEntrance(document.getElementById("panel-" + current.id));
     // Show the most recent weeks of the calendar first on narrow screens.
     document.querySelectorAll(".heat-wrap").forEach(function (w) { w.scrollLeft = w.scrollWidth; });
 
@@ -3008,7 +3344,7 @@
     const modeBtn = ev.target.closest("button[data-mode]");
     if (modeBtn) {
       state.mode[modeBtn.dataset.disc] = modeBtn.dataset.mode;
-      render();
+      render("charts");
       const again = document.querySelector('button[data-mode="' + modeBtn.dataset.mode + '"]');
       if (again) again.focus();
       return;
@@ -3036,19 +3372,19 @@
       state.pred = state.pred || {};
       state.pred[bow] = state.pred[bow] || {};
       if (t0.dataset.predhc) state.pred[bow].hc = t0.value; else state.pred[bow].scope = t0.value;
-      render();
+      render("none");
       const again = document.querySelector(t0.dataset.predhc ? '[data-predhc="' + bow + '"]' : '[data-predscope="' + bow + '"]');
       if (again) again.focus();
       return;
     }
-    if (t0.matches("select[data-review]")) { state.review = Number(t0.value); render(); const s2 = document.querySelector("select[data-review]"); if (s2) s2.focus(); return; }
+    if (t0.matches("select[data-review]")) { state.review = Number(t0.value); render("none"); const s2 = document.querySelector("select[data-review]"); if (s2) s2.focus(); return; }
     const t = ev.target;
-    if (t.dataset.trend) { state.trendRound[t.dataset.trend] = t.value; render(); focusSel('select[data-trend]'); }
-    else if (t.dataset.log !== undefined && t.matches("select[data-log]")) { state.logRound[t.dataset.log] = t.value; render(); focusSel('select[data-log]'); }
+    if (t.dataset.trend) { state.trendRound[t.dataset.trend] = t.value; render("charts"); focusSel('select[data-trend]'); }
+    else if (t.dataset.log !== undefined && t.matches("select[data-log]")) { state.logRound[t.dataset.log] = t.value; render("none"); focusSel('select[data-log]'); }
     else if (t.dataset.goal) {
       const v = num(t.value);
       store(STORAGE.goal + t.dataset.goal, v === null ? null : String(Math.max(0, Math.min(150, Math.round(v)))));
-      render();
+      render("charts");
       focusSel('input[data-goal]');
     }
   });
@@ -3140,12 +3476,13 @@
       const next = effectiveTheme() === "dark" ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", next);
       store(STORAGE.theme, next);
+      themeFade();
       updateThemeButton();
-      if (state.entries.length) render();
+      if (state.entries.length) render("none");
     });
     if (window.matchMedia) {
       const mq = window.matchMedia("(prefers-color-scheme: dark)");
-      const onChange = function () { updateThemeButton(); if (state.entries.length) render(); };
+      const onChange = function () { themeFade(); updateThemeButton(); if (state.entries.length) render("none"); };
       if (mq.addEventListener) mq.addEventListener("change", onChange); else if (mq.addListener) mq.addListener(onChange);
     }
   })();
@@ -3256,7 +3593,7 @@
 
   function isPB(e) { return e.events.some(function (ev) { return ev.type === "pb"; }); }
 
-  function applyRows(rows) {
+  function applyRows(rows, mode) {
     const entries = buildEntries(rows);
     if (!entries.length) throw new Error("The sheet loaded but no data rows were found.");
     state.entries = entries;
@@ -3266,7 +3603,7 @@
     Object.keys(state.byBucket).forEach(function (b) { computeEvents(state.byBucket[b], b); });
     state.now = new Date();
     document.getElementById("loadError").hidden = true;
-    render();
+    render(mode);
   }
 
   function showError(err) {
@@ -3304,7 +3641,7 @@
 
     loadViaJsonp(SHEET_ID, SHEET_GID).then(function (response) {
       const rows = rowsFromGviz(response);
-      if (JSON.stringify(rows) !== cachedKey) applyRows(rows);
+      if (JSON.stringify(rows) !== cachedKey) applyRows(rows, state.entries.length ? "none" : "enter");
       else if (!state.entries.length) applyRows(rows);
       store(STORAGE.cache, JSON.stringify({ savedAt: Date.now(), rows: rows }));
       setStatus(summaryStatus("updated " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })));
@@ -3319,7 +3656,7 @@
     if (KIT_SHEET_GID) {
       loadViaJsonp(SHEET_ID, KIT_SHEET_GID).then(function (response) {
         const kit = kitFromRows(rowsFromGviz(response));
-        if (kit) { state.kit = kit; if (state.tab === "kit" && state.entries.length) render(); }
+        if (kit) { state.kit = kit; if (state.tab === "kit" && state.entries.length) render("none"); }
       }).catch(function (err) { console.warn("Kit sheet not loaded:", err); });
     }
   }
