@@ -9,7 +9,7 @@
   gtag('js', new Date());
   gtag('config', 'G-JF54HQGVLT', { page_location: location.origin + location.pathname });
 </script>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Neil Fletcher: Archery Tracker</title>
 <meta name="description" content="Live archery progress tracker: handicaps, Archery GB classifications, personal bests and kit, pulled from Neil Fletcher's competition and practice log.">
 <link rel="canonical" href="https://neilfletcher.github.io/archery-tracker/">
@@ -21,274 +21,597 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Archery Tracker: Neil Fletcher">
 <meta name="twitter:description" content="Handicap progression, Archery GB classifications, personal bests and kit.">
-<meta name="theme-color" content="#f9f9f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0c10" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23ffffff' stroke='%23222' stroke-width='1'/%3E%3Ccircle cx='16' cy='16' r='12' fill='%23222'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%232a78d6'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23e5322d'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23f5c518'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js"></script>
 <!-- AGB 2023 handicap tables and classification thresholds, generated from archeryutils (see agb-data.js header). -->
 <script src="agb-data.js"></script>
 <style>
+  /* =================================================================
+     Design tokens. Chrome is monochrome; only data carries colour.
+     Each bow keeps one validated colour everywhere (light and dark
+     steps chosen separately).
+     ================================================================= */
   :root {
     color-scheme: light;
-    --surface-1:      #fcfcfb;
-    --page-plane:     #f9f9f7;
-    --text-primary:   #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted:     #6f6e69;
-    --gridline:       #e1e0d9;
-    --baseline:       #c3c2b7;
-    --border:         rgba(11,11,11,0.10);
-    --card-border:    rgba(11,11,11,0.08);
-    --success-text:   #006300;
-    --warning-text:   #8a5c00;
-    --focus:          #2a78d6;
+    --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 
-    --recurve:   #2a78d6;
-    --barebow:   #eb6834;
-    --compound:  #1baf7a;
-    --longbow:   #eda100;
-    --special:   #4a3aa7;
+    --page:        #f4f5f7;
+    --surface-1:   #ffffff;
+    --surface-2:   #f8f9fa;
+    --surface-3:   #eef0f3;
+    --sidebar:     #fbfbfc;
+    --page-plane:  #f4f5f7;
+
+    --text-primary:   #0f1115;
+    --text-secondary: #4a4f59;
+    --text-muted:     #6b717c;
+    --text-faint:     #9aa0aa;
+
+    --gridline:    #eceef1;
+    --baseline:    #d5d8de;
+    --border:      rgba(15,17,21,0.09);
+    --card-border: rgba(15,17,21,0.07);
+    --ring:        rgba(15,17,21,0.14);
+    --shadow-sm:   0 1px 2px rgba(15,17,21,0.04), 0 1px 1px rgba(15,17,21,0.03);
+    --shadow-md:   0 1px 2px rgba(15,17,21,0.05), 0 8px 24px -12px rgba(15,17,21,0.12);
+    --shadow-pop:  0 12px 32px -8px rgba(15,17,21,0.22), 0 2px 6px rgba(15,17,21,0.08);
+
+    --ink:         #0f1115;
+    --ink-contrast:#ffffff;
+    --hover:       rgba(15,17,21,0.045);
+    --selected:    rgba(15,17,21,0.07);
+
+    --success-text: #0b7a3b;
+    --success-bg:   rgba(12,163,12,0.10);
+    --warning-text: #8a5a00;
+    --warning-bg:   rgba(250,178,25,0.16);
+    --danger-text:  #b42323;
+    --focus:        #2a78d6;
+
+    --recurve:  #2a78d6;
+    --barebow:  #eb6834;
+    --compound: #1baf7a;
+    --longbow:  #eda100;
+    --special:  #6250d6;
+
+    /* Sequential (one hue, light to dark) for the calendar heatmap. */
+    --heat-0: #eef0f3;
+    --heat-1: #b7d3f6;
+    --heat-2: #6da7ec;
+    --heat-3: #2a78d6;
+    --heat-4: #184f95;
+
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
       color-scheme: dark;
-      --surface-1:      #1a1a19;
-      --page-plane:     #0d0d0d;
-      --text-primary:   #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted:     #9a9891;
-      --gridline:       #2c2c2a;
-      --baseline:       #4a4a46;
-      --border:         rgba(255,255,255,0.10);
-      --card-border:    rgba(255,255,255,0.10);
-      --success-text:   #3cc03c;
-      --warning-text:   #e0a030;
-      --focus:          #6aa7f0;
-
-      --recurve:   #3987e5;
-      --barebow:   #d95926;
-      --compound:  #199e70;
-      --longbow:   #c98500;
-      --special:   #9085e9;
+      --page:        #0b0c10;
+      --surface-1:   #14161b;
+      --surface-2:   #181b21;
+      --surface-3:   #20242c;
+      --sidebar:     #0f1115;
+      --page-plane:  #0b0c10;
+      --text-primary:   #f2f3f5;
+      --text-secondary: #b9bec8;
+      --text-muted:     #8b919c;
+      --text-faint:     #626873;
+      --gridline:    #22262e;
+      --baseline:    #343944;
+      --border:      rgba(255,255,255,0.08);
+      --card-border: rgba(255,255,255,0.07);
+      --ring:        rgba(255,255,255,0.16);
+      --shadow-sm:   0 1px 2px rgba(0,0,0,0.4);
+      --shadow-md:   0 1px 2px rgba(0,0,0,0.4), 0 12px 28px -16px rgba(0,0,0,0.7);
+      --shadow-pop:  0 16px 40px -10px rgba(0,0,0,0.75), 0 2px 6px rgba(0,0,0,0.5);
+      --ink:         #f2f3f5;
+      --ink-contrast:#0b0c10;
+      --hover:       rgba(255,255,255,0.05);
+      --selected:    rgba(255,255,255,0.08);
+      --success-text: #3cc56a;
+      --success-bg:   rgba(12,163,12,0.16);
+      --warning-text: #f0b33c;
+      --warning-bg:   rgba(250,178,25,0.14);
+      --danger-text:  #ff7b7b;
+      --focus:        #6aa7f0;
+      --recurve:  #3987e5;
+      --barebow:  #d95926;
+      --compound: #199e70;
+      --longbow:  #c98500;
+      --special:  #9085e9;
+      --heat-0: #1d2027;
+      --heat-1: #173257;
+      --heat-2: #1c5cab;
+      --heat-3: #3987e5;
+      --heat-4: #86b6ef;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --surface-1:      #1a1a19;
-    --page-plane:     #0d0d0d;
-    --text-primary:   #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted:     #9a9891;
-    --gridline:       #2c2c2a;
-    --baseline:       #4a4a46;
-    --border:         rgba(255,255,255,0.10);
-    --card-border:    rgba(255,255,255,0.10);
-    --success-text:   #3cc03c;
-    --warning-text:   #e0a030;
-    --focus:          #6aa7f0;
-
-    --recurve:   #3987e5;
-    --barebow:   #d95926;
-    --compound:  #199e70;
-    --longbow:   #c98500;
-    --special:   #9085e9;
+    --page:        #0b0c10;
+    --surface-1:   #14161b;
+    --surface-2:   #181b21;
+    --surface-3:   #20242c;
+    --sidebar:     #0f1115;
+    --page-plane:  #0b0c10;
+    --text-primary:   #f2f3f5;
+    --text-secondary: #b9bec8;
+    --text-muted:     #8b919c;
+    --text-faint:     #626873;
+    --gridline:    #22262e;
+    --baseline:    #343944;
+    --border:      rgba(255,255,255,0.08);
+    --card-border: rgba(255,255,255,0.07);
+    --ring:        rgba(255,255,255,0.16);
+    --shadow-sm:   0 1px 2px rgba(0,0,0,0.4);
+    --shadow-md:   0 1px 2px rgba(0,0,0,0.4), 0 12px 28px -16px rgba(0,0,0,0.7);
+    --shadow-pop:  0 16px 40px -10px rgba(0,0,0,0.75), 0 2px 6px rgba(0,0,0,0.5);
+    --ink:         #f2f3f5;
+    --ink-contrast:#0b0c10;
+    --hover:       rgba(255,255,255,0.05);
+    --selected:    rgba(255,255,255,0.08);
+    --success-text: #3cc56a;
+    --success-bg:   rgba(12,163,12,0.16);
+    --warning-text: #f0b33c;
+    --warning-bg:   rgba(250,178,25,0.14);
+    --danger-text:  #ff7b7b;
+    --focus:        #6aa7f0;
+    --recurve:  #3987e5;
+    --barebow:  #d95926;
+    --compound: #199e70;
+    --longbow:  #c98500;
+    --special:  #9085e9;
+    --heat-0: #1d2027;
+    --heat-1: #173257;
+    --heat-2: #1c5cab;
+    --heat-3: #3987e5;
+    --heat-4: #86b6ef;
   }
 
+  /* ================================================================= Base */
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    background: var(--page-plane);
-    color: var(--text-primary);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    -webkit-font-smoothing: antialiased;
+    background: var(--page); color: var(--text-primary);
+    font-family: var(--font); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss01";
   }
-  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 64px; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+  svg { display: block; }
 
-  header.page-head {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
+  /* ================================================================ Shell */
+  .app { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; background: linear-gradient(90deg, var(--sidebar) 247px, var(--border) 247px, var(--border) 248px, transparent 248px); }
+  .sidebar {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    background: var(--sidebar); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 14px;
   }
-  h1 { font-size: 1.5rem; margin: 0 0 4px; }
-  .sub { color: var(--text-secondary); font-size: 0.92rem; margin: 0; }
-  .status-line { color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }
-  .status-line.warn { color: var(--warning-text); }
-  .head-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .brand { display: flex; align-items: center; gap: 11px; padding: 4px 8px 22px; text-decoration: none; }
+  .brand-mark { width: 34px; height: 34px; flex: none; border-radius: 10px; background: var(--ink); display: grid; place-items: center; box-shadow: var(--shadow-sm); }
+  .brand-name { font-weight: 650; font-size: 0.95rem; letter-spacing: -0.01em; line-height: 1.2; }
+  .brand-sub { font-size: 0.75rem; color: var(--text-muted); }
+  .nav-label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); padding: 14px 10px 6px; }
 
-  button.btn {
-    background: var(--surface-1); color: var(--text-primary);
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 8px 12px; font: inherit; font-size: 0.82rem; cursor: pointer;
-  }
-  button.btn:hover { background: var(--page-plane); }
-
-  nav.tabs {
-    display: flex; gap: 6px; flex-wrap: wrap;
-    border-bottom: 1px solid var(--gridline);
-    margin-bottom: 20px; padding-bottom: 0;
-  }
+  nav.tabs { display: flex; flex-direction: column; gap: 2px; }
+  nav.tabs[hidden] { display: none; }
   nav.tabs button {
-    background: none; border: none; cursor: pointer;
-    font-family: inherit; font-size: 0.88rem; font-weight: 600;
-    color: var(--text-secondary); padding: 10px 14px;
-    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    background: none; border: 0; border-radius: 9px; cursor: pointer;
+    font: inherit; font-size: 0.875rem; font-weight: 500; color: var(--text-secondary);
+    padding: 8px 10px; text-align: left; transition: background .12s ease, color .12s ease;
   }
-  nav.tabs button[aria-selected="true"] { color: var(--text-primary); border-bottom-color: var(--dot, var(--text-primary)); }
-  nav.tabs button:hover { color: var(--text-primary); }
-  nav.tabs .tab-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  nav.tabs button:hover { background: var(--hover); color: var(--text-primary); }
+  nav.tabs button[aria-selected="true"] { background: var(--selected); color: var(--text-primary); font-weight: 600; }
+  nav.tabs .nav-ico { width: 18px; height: 18px; flex: none; display: grid; place-items: center; color: var(--text-muted); }
+  nav.tabs button[aria-selected="true"] .nav-ico { color: var(--text-primary); }
+  .tab-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; vertical-align: 0; }
+  nav.tabs .tab-dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 0 3px var(--sidebar); }
+  nav.tabs .nav-meta { margin-left: auto; font-size: 0.75rem; font-weight: 500; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  nav.tabs .nav-sep { height: 1px; background: var(--border); margin: 10px 8px; }
+  nav.tabs .nav-group { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); padding: 12px 10px 4px; }
 
+  .sidebar-foot { margin-top: auto; padding: 16px 10px 4px; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-muted); }
+  .sidebar-foot a { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; padding: 5px 0; }
+  .sidebar-foot a:hover { color: var(--text-primary); }
+  .live { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; line-height: 1.35; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #0ca30c; box-shadow: 0 0 0 3px rgba(12,163,12,0.18); flex: none; }
+  .live.warn .live-dot { background: #fab219; box-shadow: 0 0 0 3px rgba(250,178,25,0.2); }
+
+  .main { min-width: 0; padding: 0 32px 56px; }
+  .topbar {
+    position: sticky; top: 0; z-index: 20; margin: 0 -32px 24px; padding: 18px 32px 16px;
+    background: color-mix(in srgb, var(--page) 86%, transparent);
+    backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .crumbs { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px; }
+  h1 { font-size: 1.375rem; line-height: 1.25; font-weight: 650; letter-spacing: -0.02em; margin: 0; }
+  .head-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* ============================================================ Controls */
+  .select-wrap { position: relative; display: inline-flex; align-items: center; }
+  .select-wrap .ico { position: absolute; left: 11px; pointer-events: none; color: var(--text-muted); }
+  .select-wrap select { padding-left: 32px; }
+  select, input[type=text], input[type=number] {
+    font-family: inherit; font-size: 0.8125rem; color: var(--text-primary);
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 9px;
+    padding: 7px 30px 7px 11px; height: 34px; box-shadow: var(--shadow-sm);
+  }
+  input[type=text], input[type=number] { padding-right: 11px; }
+  select { appearance: none; -webkit-appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b717c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; }
+  select:hover, input:hover { border-color: var(--ring); }
+  input[type=number] { width: 84px; }
+  label.ctl { font-size: 0.8125rem; color: var(--text-secondary); display: inline-flex; gap: 8px; align-items: center; font-weight: 500; }
+
+  button.btn, a.btn {
+    display: inline-flex; align-items: center; gap: 7px; height: 34px;
+    background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 9px; box-shadow: var(--shadow-sm);
+    padding: 0 12px; font: inherit; font-size: 0.8125rem; font-weight: 500; cursor: pointer; text-decoration: none;
+    transition: background .12s ease, border-color .12s ease;
+  }
+  button.btn:hover, a.btn:hover { background: var(--surface-2); border-color: var(--ring); }
+  button.btn.icon { width: 34px; padding: 0; justify-content: center; }
+  button.btn.primary { background: var(--ink); color: var(--ink-contrast); border-color: transparent; }
+
+  .seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--surface-3); border-radius: 10px; }
+  .seg button {
+    background: transparent; color: var(--text-secondary); border: 0; border-radius: 7px;
+    font: inherit; font-size: 0.78rem; font-weight: 500; padding: 5px 11px; cursor: pointer;
+  }
+  .seg button:hover { color: var(--text-primary); }
+  .seg button[aria-pressed="true"] { background: var(--surface-1); color: var(--text-primary); font-weight: 600; box-shadow: var(--shadow-sm); }
+  .controls-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+
+  /* ================================================================ Grid */
+  .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 20px; margin-bottom: 20px; }
+  .grid > * { min-width: 0; margin-bottom: 0 !important; }
+  .span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-7 { grid-column: span 7; }
+  .span-6 { grid-column: span 6; } .span-5 { grid-column: span 5; } .span-4 { grid-column: span 4; }
+  .col { display: flex; flex-direction: column; }
+  .col > .card { flex: 1 1 auto; margin-bottom: 0; }
+  .stack { display: flex; flex-direction: column; gap: 20px; }
+  .section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 36px 0 14px; padding-top: 4px; }
+  .section-title h2 { font-size: 0.95rem; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .section-title p { margin: 0; font-size: 0.78rem; color: var(--text-muted); }
+
+  /* =============================================================== Cards */
   .panel[hidden] { display: none; }
-
   .card {
-    background: var(--surface-1); border: 1px solid var(--card-border);
-    border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
+    background: var(--surface-1); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md); padding: 20px 22px; margin-bottom: 20px; min-width: 0;
   }
-  .card h2 { font-size: 1.02rem; margin: 0 0 4px; }
-  .card h3 { font-size: 0.92rem; margin: 16px 0 8px; color: var(--text-secondary); font-weight: 600; }
-  .card h3:first-of-type { margin-top: 8px; }
-  .card-note { color: var(--text-muted); font-size: 0.78rem; margin: 2px 0 14px; line-height: 1.45; }
-  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .card h2 { font-size: 0.9375rem; line-height: 1.35; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 2px; }
+  .card h2 > .dot { margin-right: 8px; vertical-align: 2px; }
+  .card h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 20px 0 10px; color: var(--text-muted); font-weight: 600; }
+  .card h3:first-of-type { margin-top: 10px; }
+  .card-note { color: var(--text-muted); font-size: 0.78rem; margin: 2px 0 16px; line-height: 1.55; max-width: 72ch; }
+  .card-note a { color: var(--text-secondary); }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  .card-head > div:first-child { min-width: 0; flex: 1 1 260px; }
+  .card.flush { padding: 0; overflow: hidden; }
+  .card-eyebrow { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 7px; }
 
-  .tile-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  /* =========================================================== KPI tiles */
+  .tile-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 20px; }
   .tile {
-    background: var(--surface-1); border: 1px solid var(--card-border);
-    border-radius: 12px; padding: 14px 16px; min-width: 0;
+    position: relative; background: var(--surface-1); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md); padding: 16px 18px 14px; min-width: 0; display: flex; flex-direction: column;
   }
-  .tile .label { font-size: 0.74rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.02em; }
-  .tile .value { font-size: 1.25rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
-  .tile .value small { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-secondary); margin-top: 3px; line-height: 1.35; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 2px; }
+  .tile .label { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
+  .tile .value { font-size: 1.5rem; font-weight: 650; letter-spacing: -0.025em; line-height: 1.15; overflow-wrap: anywhere; }
+  .tile .value small { display: block; font-size: 0.75rem; font-weight: 500; letter-spacing: 0; color: var(--text-secondary); margin-top: 6px; line-height: 1.45; }
+  .tile .value .unit { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0; margin-left: 2px; }
+  .tile .spark { margin-top: auto; padding-top: 12px; }
+  .tile .dot, .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 2px; vertical-align: 1px; flex: none; }
+  .delta { display: inline-flex; align-items: center; gap: 3px; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; letter-spacing: 0; vertical-align: 3px; margin-left: 6px; }
+  .delta.up { color: var(--success-text); background: var(--success-bg); }
+  .delta.down { color: var(--warning-text); background: var(--warning-bg); }
+  .delta.flat { color: var(--text-muted); background: var(--surface-3); }
 
-  .chart-box { position: relative; height: 300px; margin-bottom: 4px; }
-  .chart-box.short { height: 220px; }
+  /* ================================================================ Hero */
+  .hero { position: relative; overflow: hidden; padding: 24px 26px; }
+  .hero-top { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+  .hero-figure { font-size: 3.5rem; font-weight: 700; letter-spacing: -0.045em; line-height: 1; margin: 6px 0 6px; }
+  .hero-figure .unit { font-size: 1rem; font-weight: 500; letter-spacing: 0; color: var(--text-muted); margin-left: 8px; }
+  .hero-caption { color: var(--text-secondary); font-size: 0.875rem; max-width: 52ch; }
+  .hero-caption strong { color: var(--text-primary); font-weight: 600; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+  .chip .dot { margin: 0; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* Classification ladder: where each bow's handicap sits */
+  .ladder { margin-top: 24px; }
+  .ladder-track { position: relative; height: 10px; border-radius: 999px; background: linear-gradient(90deg, var(--surface-3), var(--surface-3)); }
+  .ladder-ticks { position: absolute; inset: 0; display: flex; }
+  .ladder-ticks span { flex: 1; border-right: 2px solid var(--surface-1); }
+  .ladder-ticks span:last-child { border-right: 0; }
+  .ladder-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; opacity: 0.9; }
+  .ladder-pin { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; border: 3px solid var(--surface-1); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .ladder-labels { display: grid; grid-template-columns: repeat(9, 1fr); margin-top: 8px; font-size: 0.68rem; color: var(--text-faint); font-weight: 500; text-align: center; }
+  .ladder-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; font-size: 0.78rem; color: var(--text-secondary); }
+  .ladder-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .ladder-legend b { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ========================================================= Bow summary */
+  .bow-list { display: flex; flex-direction: column; }
+  .bow-row { display: grid; grid-template-columns: 4px minmax(0,1fr) auto; gap: 14px; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--gridline); text-decoration: none; color: inherit; }
+  .bow-row:last-child { border-bottom: 0; padding-bottom: 2px; }
+  .bow-row:first-child { padding-top: 4px; }
+  .bow-row:hover .bow-name { text-decoration: underline; text-underline-offset: 3px; }
+  .bow-bar { width: 4px; height: 100%; min-height: 38px; border-radius: 4px; }
+  .bow-name { font-weight: 600; font-size: 0.875rem; }
+  .bow-sub { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bow-hc { text-align: right; }
+  .bow-hc b { display: block; font-size: 1.25rem; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .bow-hc span { font-size: 0.7rem; color: var(--text-muted); }
+  .tag { display: inline-flex; align-items: center; font-size: 0.68rem; font-weight: 600; padding: 1px 7px; border-radius: 999px; margin-left: 6px; vertical-align: 1px; }
+  .tag.lapsed { color: var(--warning-text); background: var(--warning-bg); }
+
+  /* ============================================================ Insights */
+  .insights { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .insights li { display: grid; grid-template-columns: 32px minmax(0,1fr); gap: 12px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--gridline); font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5; }
+  .insights li:last-child { border-bottom: 0; }
+  .insights strong { color: var(--text-primary); font-weight: 600; }
+  .ins-ico { width: 32px; height: 32px; border-radius: 9px; background: var(--surface-3); display: grid; place-items: center; color: var(--text-secondary); }
+
+  /* ============================================================ Heatmap */
+  .heat-wrap { overflow-x: auto; padding-bottom: 4px; }
+  .heat-wrap svg { min-width: 680px; width: 100%; height: auto; }
+  .heat-cell { rx: 2.5; }
+  .heat-cell:hover { stroke: var(--text-primary); stroke-width: 1.5; }
+  .heat-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 0.75rem; color: var(--text-muted); }
+  .heat-scale { display: inline-flex; align-items: center; gap: 4px; }
+  .heat-scale i { width: 11px; height: 11px; border-radius: 2.5px; display: inline-block; }
+
+  /* =========================================================== Timeline */
+  .timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+  .timeline li { display: grid; grid-template-columns: 74px 18px minmax(0,1fr); gap: 10px; align-items: start; padding: 8px 0; font-size: 0.84rem; }
+  .timeline .t-date { color: var(--text-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; padding-top: 2px; white-space: nowrap; }
+  .timeline .t-node { position: relative; height: 100%; display: flex; justify-content: center; }
+  .timeline .t-node::before { content: ""; position: absolute; top: 0; bottom: -16px; width: 1px; background: var(--gridline); }
+  .timeline li:last-child .t-node::before { display: none; }
+  .timeline .t-node i { position: relative; width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; box-shadow: 0 0 0 3px var(--surface-1); }
+  .timeline .t-body { color: var(--text-secondary); min-width: 0; }
+  .timeline .t-body strong { color: var(--text-primary); font-weight: 600; }
+  .scroll-y { max-height: 372px; overflow-y: auto; margin-right: -8px; padding-right: 8px; }
+
+  /* ===================================================== Stat strip, facts */
+  .stat-strip { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); margin-top: 18px; border-top: 1px solid var(--gridline); }
+  .stat-strip > div { padding: 14px 16px 2px; border-left: 1px solid var(--gridline); min-width: 0; }
+  .stat-strip > div:first-child { border-left: 0; padding-left: 0; }
+  .ss-label { font-size: 0.72rem; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; }
+  .ss-value { font-size: 1.15rem; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .ss-sub { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fact-row { grid-template-columns: minmax(0,1fr) auto !important; }
+  .fact-label { font-size: 0.8125rem; font-weight: 500; color: var(--text-secondary); }
+  .fact-value { font-size: 1rem !important; text-align: right; }
+  .hero-spark { width: 200px; max-width: 100%; }
+  .hero-spark .ss-label { text-align: right; }
+  .hero-ladders { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 28px; margin-top: 4px; }
+  .hero-ladders .ladder { margin-top: 10px; }
+  .ladder-head { display: flex; justify-content: space-between; align-items: baseline; margin-top: 20px; font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+  .ladder-head b { color: var(--text-primary); font-weight: 600; font-size: 0.8125rem; }
+
+  /* ================================================================ 252 */
+  .ladder252 { display: flex; flex-direction: column; gap: 14px; }
+  .l252-row { display: grid; grid-template-columns: 92px minmax(0,1fr); gap: 14px; align-items: center; }
+  .l252-name { font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .l252-track { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 6px; }
+  .l252-step { height: 28px; border-radius: 7px; background: var(--surface-3); display: grid; place-items: center; font-size: 0.68rem; font-weight: 600; color: var(--text-muted); position: relative; }
+  .l252-step.part { background: var(--surface-1); box-shadow: inset 0 0 0 1.5px var(--step-color); color: var(--text-secondary); }
+  .l252-step.done { background: var(--step-color); color: #fff; }
+  .l252-dist { display: grid; grid-template-columns: 92px minmax(0,1fr); gap: 14px; font-size: 0.68rem; color: var(--text-faint); font-weight: 500; }
+  .l252-dist div { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 6px; text-align: center; }
+
+  /* ============================================================== Charts */
+  .chart-box { position: relative; height: 320px; }
+  .chart-box.short { height: 230px; }
+  .chart-box.tall { height: 360px; }
   .chart-legend-note { color: var(--text-muted); font-size: 0.76rem; margin-top: 8px; }
+  .legend { display: flex; gap: 6px; flex-wrap: wrap; }
+  .legend button { display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 0.78rem; font-weight: 500; color: var(--text-secondary);
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px 4px 9px; cursor: pointer; }
+  .legend button[aria-pressed="false"] { color: var(--text-faint); background: transparent; }
+  .legend button[aria-pressed="false"] .dot { background: var(--baseline) !important; }
+  .viz-tip { position: fixed; z-index: 100; pointer-events: none; background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-pop); padding: 8px 11px; font-size: 0.78rem; line-height: 1.45;
+    opacity: 0; transform: translateY(4px); transition: opacity .1s ease, transform .1s ease; max-width: 260px; }
+  .viz-tip.show { opacity: 1; transform: none; }
+  .viz-tip b { font-weight: 650; }
+  .viz-tip .tip-sub { color: var(--text-muted); }
 
-  table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  /* ============================================================== Tables */
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; }
   thead th {
-    text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em;
-    color: var(--text-muted); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--gridline);
-    position: sticky; top: 0; background: var(--surface-1); white-space: nowrap;
+    text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-muted); font-weight: 600; padding: 9px 12px; border-bottom: 1px solid var(--gridline);
+    position: sticky; top: 0; background: var(--surface-1); white-space: nowrap; z-index: 1;
   }
-  tbody td { padding: 7px 10px; border-bottom: 1px solid var(--gridline); vertical-align: top; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--gridline); vertical-align: top; }
   tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--surface-2); }
   td.num, th.num { font-variant-numeric: tabular-nums; text-align: right; }
   td.nowrap { white-space: nowrap; }
-  .table-scroll { max-height: 420px; overflow: auto; border: 1px solid var(--gridline); border-radius: 8px; }
-  .table-wide-scroll { overflow-x: auto; }
+  .table-scroll { max-height: 440px; overflow: auto; border: 1px solid var(--gridline); border-radius: var(--radius-md); }
+  .table-wide-scroll { overflow-x: auto; border: 1px solid var(--gridline); border-radius: var(--radius-md); }
+  .table-scroll thead th, .table-wide-scroll thead th { background: var(--surface-2); }
   .muted { color: var(--text-muted); }
-  .small { font-size: 0.76rem; }
+  .small { font-size: 0.75rem; }
 
+  /* ============================================================== Badges */
   .badge {
-    display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em;
-    padding: 2px 6px; border-radius: 4px; margin-right: 6px; color: #fff; white-space: nowrap;
+    display: inline-flex; align-items: center; font-size: 0.66rem; font-weight: 650; letter-spacing: 0.04em;
+    padding: 2px 7px; border-radius: 6px; margin-right: 7px; color: #fff; white-space: nowrap; vertical-align: 1px;
   }
-  .badge.p1 { background: #7a5f0a; }
-  .badge.p2 { background: #626262; }
-  .badge.p3 { background: #87552e; }
-  .badge.pn { background: transparent; color: var(--text-secondary); border: 1px solid var(--baseline); }
-  .badge.rs { background: transparent; color: var(--text-secondary); border: 1px solid var(--baseline); }
-  .pill { display: inline-block; font-size: 0.7rem; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--baseline); color: var(--text-secondary); white-space: nowrap; }
+  .badge.p1 { background: linear-gradient(135deg, #b8901c, #8a6a0c); }
+  .badge.p2 { background: linear-gradient(135deg, #8c9096, #62666c); }
+  .badge.p3 { background: linear-gradient(135deg, #a8693a, #7c4a26); }
+  .badge.pn, .badge.rs, .badge.ev { background: var(--surface-3); color: var(--text-secondary); }
+  .badge.ev-pb { color: var(--success-text); background: var(--success-bg); }
+  .badge.ev-podium { color: var(--warning-text); background: var(--warning-bg); }
+  .badge.ev-class { color: var(--text-primary); background: var(--selected); }
+  .pill { display: inline-flex; font-size: 0.7rem; font-weight: 500; padding: 1px 8px; border-radius: 999px; background: var(--surface-3); color: var(--text-secondary); white-space: nowrap; }
 
   .status-good { color: var(--success-text); font-weight: 600; }
   .status-warn { color: var(--warning-text); font-weight: 600; }
-  .status-pending { color: var(--text-muted); }
+  .status-pending { color: var(--text-faint); }
 
-  select, input[type=text], input[type=number] {
-    font-family: inherit; font-size: 0.82rem; padding: 6px 10px;
-    border: 1px solid var(--border); border-radius: 8px;
-    background: var(--surface-1); color: var(--text-primary);
-  }
-  input[type=number] { width: 76px; }
-  label.ctl { font-size: 0.82rem; color: var(--text-secondary); display: inline-flex; gap: 6px; align-items: center; }
-  .controls-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
-
-  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-  .seg button {
-    background: var(--surface-1); color: var(--text-secondary); border: none; font: inherit;
-    font-size: 0.8rem; padding: 6px 12px; cursor: pointer; border-right: 1px solid var(--border);
-  }
-  .seg button:last-child { border-right: none; }
-  .seg button[aria-pressed="true"] { background: var(--page-plane); color: var(--text-primary); font-weight: 600; }
-
-  .next-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
-  .next-summary { font-size: 0.88rem; color: var(--text-secondary); margin: 0 0 10px; line-height: 1.5; }
+  .next-summary { font-size: 0.875rem; color: var(--text-secondary); margin: 0 0 12px; line-height: 1.55; }
   .next-summary strong { color: var(--text-primary); }
 
-  .kit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+  .kit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
   .kit-grid .card { margin-bottom: 0; }
-  dl.kit { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 8px 0 0; font-size: 0.86rem; }
+  dl.kit { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; margin: 12px 0 0; font-size: 0.84rem; }
   dl.kit dt { color: var(--text-muted); }
-  dl.kit dd { margin: 0; }
+  dl.kit dd { margin: 0; font-weight: 500; }
+  .est-out { font-weight: 650; font-variant-numeric: tabular-nums; font-size: 1rem; }
+  details.claim-detail { margin-top: 14px; }
+  details.claim-detail summary { cursor: pointer; font-size: 0.84rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; }
+  ul.plain { margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 0.84rem; }
+  ul.plain li { margin: 3px 0; }
 
-  .error-box {
-    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
-    padding: 20px; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5;
-  }
-  .error-box code { background: var(--page-plane); padding: 1px 5px; border-radius: 4px; font-size: 0.82rem; overflow-wrap: anywhere; }
+  .error-box { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px; color: var(--text-secondary); font-size: 0.875rem; line-height: 1.55; box-shadow: var(--shadow-md); }
+  .error-box code { background: var(--surface-3); padding: 1px 6px; border-radius: 5px; font-size: 0.8rem; overflow-wrap: anywhere; }
 
-  footer { color: var(--text-muted); font-size: 0.78rem; margin-top: 32px; text-align: center; line-height: 1.6; }
-  footer a, .card-note a { color: var(--text-secondary); }
+  footer.page-foot { color: var(--text-muted); font-size: 0.75rem; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); line-height: 1.7; }
+  footer.page-foot a { color: var(--text-secondary); }
 
-  .badge.ev { background: transparent; color: var(--text-secondary); border: 1px solid var(--baseline); }
-  .badge.ev-pb { color: var(--success-text); border-color: var(--success-text); }
-  .badge.ev-podium { color: var(--warning-text); border-color: var(--warning-text); }
-  .est-out { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 0.95rem; }
-  details.claim-detail { margin-top: 12px; }
-  details.claim-detail summary { cursor: pointer; font-size: 0.84rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+  /* Loading skeleton (first visit only). */
+  .skeleton { display: grid; gap: 20px; }
+  .skeleton div { height: 120px; border-radius: var(--radius-lg); background: linear-gradient(90deg, var(--surface-3) 0%, var(--surface-2) 50%, var(--surface-3) 100%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .skeleton div { animation: none; } * { transition: none !important; } }
 
+  /* =============================================================== Print */
   .print-only { display: none; }
   @media print {
     .print-target .print-only { display: block !important; }
     body { background: #fff; color: #000; }
-    .head-controls, nav.tabs, footer, .no-print, #loadError, #connectScreen { display: none !important; }
-    body[data-printing] .panel > :not(.print-target) { display: none !important; }
-    .card { border-color: #bbb; break-inside: avoid; }
+    .app { display: block; }
+    .sidebar, .topbar, footer.page-foot, .no-print, #loadError { display: none !important; }
+    .main { padding: 0; }
+    body[data-printing] .panel > :not(.print-target), body[data-printing] .grid > :not(.print-target) { display: none !important; }
+    body[data-printing] .grid { display: block; }
+    .card, .tile { box-shadow: none; border-color: #ccc; break-inside: avoid; }
+    .dot, .tab-dot, .badge, .l252-step { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .table-scroll { max-height: none; overflow: visible; }
     thead th { position: static; }
   }
 
-  @media (max-width: 560px) {
-    .tile-row { grid-template-columns: repeat(2, 1fr); }
-    nav.tabs button { padding: 8px 10px; font-size: 0.82rem; }
-    .card { padding: 16px 14px; }
-    .chart-box { height: 260px; }
+  /* ========================================================== Responsive */
+  @media (max-width: 1180px) {
+    .span-8, .span-7, .span-6, .span-5, .span-4 { grid-column: span 12; }
   }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: minmax(0,1fr); background: none; }
+    .sidebar { position: sticky; top: 0; z-index: 30; height: auto; flex-direction: row; align-items: center; gap: 10px; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--border); overflow: visible; }
+    .brand { padding: 0; }
+    .brand-text, .nav-label, .sidebar-foot { display: none; }
+    nav.tabs { flex-direction: row; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent); mask-image: linear-gradient(90deg, #000 90%, transparent); }
+    nav.tabs::-webkit-scrollbar { display: none; }
+    nav.tabs button { width: auto; white-space: nowrap; padding: 7px 11px; }
+    nav.tabs .nav-meta, nav.tabs .nav-sep, nav.tabs .nav-group { display: none; }
+    .main { padding: 0 16px 48px; }
+    .topbar { position: static; margin: 0 -16px 18px; padding: 16px; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+    .span-4, .span-5, .span-6 { grid-column: span 12; }
+    .mobile-status { display: block !important; }
+  }
+  @media (max-width: 560px) {
+    body { font-size: 13.5px; }
+    .grid { gap: 14px; margin-bottom: 14px; }
+    .tile-row { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+    .tile { padding: 14px; }
+    .tile .value { font-size: 1.25rem; }
+    .card { padding: 16px; border-radius: 14px; }
+    .hero { padding: 20px 18px; }
+    .hero-figure { font-size: 2.75rem; }
+    .chart-box { height: 270px; }
+    .head-controls { width: 100%; }
+    .head-controls .select-wrap { flex: 1; }
+    .head-controls select { width: 100%; }
+    .timeline li { grid-template-columns: 70px 14px minmax(0,1fr); gap: 8px; }
+    .timeline .t-date { font-size: 0.7rem; }
+    .l252-row, .l252-dist { grid-template-columns: 70px minmax(0,1fr); gap: 8px; }
+    .l252-track, .l252-dist div { gap: 3px; }
+    .l252-step { font-size: 0.6rem; height: 24px; }
+    .ladder-labels { font-size: 0.58rem; }
+    .stat-strip { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .ss-sub { white-space: normal; }
+    .stat-strip > div:nth-child(3) { border-left: 0; padding-left: 0; }
+    .stat-strip > div:nth-child(n+3) { border-top: 1px solid var(--gridline); }
+    .hero-ladders { grid-template-columns: minmax(0,1fr); gap: 0; }
+    .hero-spark { width: 100%; }
+    .hero-spark .ss-label { text-align: left; }
+  }
+  .mobile-status { display: none; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="app">
 
-  <header class="page-head">
-    <div>
-      <h1>Archery Tracker</h1>
-      <p class="sub">Neil Fletcher: competition and practice log</p>
-      <p class="status-line" id="statusLine" role="status">Loading live data…</p>
+  <aside class="sidebar" aria-label="Navigation">
+    <a class="brand" href="#overview" data-brand>
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="var(--ink-contrast)" stroke-width="1.8" opacity=".55"/><circle cx="12" cy="12" r="6" stroke="var(--ink-contrast)" stroke-width="1.8" opacity=".8"/><circle cx="12" cy="12" r="2.2" fill="var(--ink-contrast)"/></svg>
+      </span>
+      <span class="brand-text"><span class="brand-name">Archery Tracker</span><br><span class="brand-sub">Neil Fletcher</span></span>
+    </a>
+    <div class="nav-label">Workspace</div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Sections" aria-orientation="vertical" hidden></nav>
+    <div class="sidebar-foot">
+      <div class="live" id="liveBox"><span class="live-dot" aria-hidden="true"></span><span class="status-line" id="statusLine" role="status">Loading live data…</span></div>
+      <a href="https://neilfletcher.github.io/DB-club-records/"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Club records</a>
+      <a href="https://neilfletcher.github.io/DB-archery-dashboard/"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Club score tracker</a>
     </div>
-    <div class="head-controls">
-      <label class="ctl" for="seasonSelect">Show
-        <select id="seasonSelect"><option value="all">All time</option></select>
-      </label>
-      <button class="btn" id="shareBtn" type="button">Share</button>
-      <button class="btn" id="themeToggle" type="button">Dark theme</button>
-    </div>
-  </header>
+  </aside>
 
-  <nav class="tabs" id="tabs" role="tablist" aria-label="Sections" hidden></nav>
-  <div id="panels"></div>
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="crumbs" id="crumbs">Neil Fletcher · Duston Bowmen</div>
+        <h1 id="viewTitle">Overview</h1>
+        <div class="mobile-status" id="mobileStatus"></div>
+      </div>
+      <div class="head-controls">
+        <label class="sr-only" for="seasonSelect">Period</label>
+        <span class="select-wrap">
+          <svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <select id="seasonSelect"><option value="all">All time</option></select>
+        </span>
+        <button class="btn" id="shareBtn" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg><span id="shareLabel">Share</span></button>
+        <button class="btn icon" id="themeToggle" type="button" aria-label="Switch theme"></button>
+      </div>
+    </header>
 
-  <div id="loadError" hidden></div>
+    <div id="panels"><div class="skeleton" aria-hidden="true"><div style="height:200px"></div><div></div><div style="height:320px"></div></div></div>
+    <div id="loadError" hidden></div>
 
-  <footer>
-    Data pulled live from <a id="sourceLink" href="#" target="_blank" rel="noopener">the source spreadsheet</a> on each visit; the last good copy is kept in your browser so the page still works offline.<br>
-    Handicaps use the Archery GB 2023 scheme: lower is better, so handicap chart axes are inverted and an upward line means improvement.
-    Classification scores come from <a href="https://github.com/jatkinson1000/archery-utils" target="_blank" rel="noopener">archeryutils</a> and may occasionally differ by a point from the official tables.<br>
-    See also the <a href="https://neilfletcher.github.io/DB-club-records/">Duston Bowmen club records</a> and the <a href="https://neilfletcher.github.io/DB-archery-dashboard/">club score tracker</a> for any member's sheet.
-  </footer>
-
+    <footer class="page-foot">
+      Data pulled live from <a id="sourceLink" href="#" target="_blank" rel="noopener">the source spreadsheet</a> on each visit; the last good copy is kept in your browser so the page still works offline.
+      Handicaps use the Archery GB 2023 scheme: lower is better, so handicap axes are inverted and an upward line means improvement.
+      Classification scores come from <a href="https://github.com/jatkinson1000/archery-utils" target="_blank" rel="noopener">archeryutils</a> and may occasionally differ by a point from the official tables.
+      See also the <a href="https://neilfletcher.github.io/DB-club-records/">Duston Bowmen club records</a> and the <a href="https://neilfletcher.github.io/DB-archery-dashboard/">club score tracker</a> for any member's sheet.
+    </footer>
+  </main>
 </div>
+<div class="viz-tip" id="vizTip" role="tooltip"></div>
 
 <script>
 (function () {
@@ -860,7 +1183,7 @@
       if (!lines.length) return;
       const y = chart.scales.y, area = chart.chartArea, ctx = chart.ctx;
       ctx.save();
-      ctx.font = "11px system-ui, -apple-system, 'Segoe UI', sans-serif";
+      ctx.font = "500 11px Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
       lines.forEach(function (ln) {
@@ -887,7 +1210,8 @@
   function baseTooltip() {
     return {
       backgroundColor: cssVar("--surface-1"), titleColor: cssVar("--text-primary"), bodyColor: cssVar("--text-secondary"),
-      borderColor: cssVar("--border"), borderWidth: 1, padding: 10, boxPadding: 4, usePointStyle: true
+      borderColor: cssVar("--border"), borderWidth: 1, padding: 12, boxPadding: 5, usePointStyle: true, cornerRadius: 10, caretSize: 5,
+      titleFont: { weight: "600", size: 12 }, bodyFont: { size: 12 }, titleMarginBottom: 6
     };
   }
 
@@ -1165,17 +1489,7 @@
     const latestRun = withRun.length ? withRun[withRun.length - 1] : null;
     const lowestRun = minBy(allEntries.filter(function (e) { return e.hcRunning !== null; }), function (e) { return e.hcRunning; });
 
-    let html = '<div class="tile-row">';
-    html += tile("Shoots logged", entries.length, indoorN + " indoor · " + (entries.length - indoorN) + " outdoor", colorVar);
-    const lapsed = latestRun && latestRun.date < new Date(state.now.getTime() - 365 * 864e5);
-    html += tile("Running handicap", latestRun ? latestRun.hcRunning : "-",
-      (lapsed ? "lapsed: no score since " + fmtDate(latestRun.date) + "<br>" : "") +
-      (lowestRun ? "lowest ever " + lowestRun.hcRunning + " · " + fmtDate(lowestRun.date) : ""));
-    html += bestRoundTile(entries, "outdoor");
-    html += bestRoundTile(entries, "indoor");
-    html += classTile(allEntries, "outdoor");
-    html += classTile(allEntries, "indoor");
-    html += "</div>";
+    let html = gridRow([[8, bowHeroCard(name, allEntries)], [4, bowFactsCard(name, allEntries, entries)]]);
 
     if (!entries.length) {
       html += '<div class="card"><p class="muted">No ' + name.toLowerCase() + " shoots in " + escapeHtml(seasonLabel(state.season)) + ".</p></div>";
@@ -1186,7 +1500,7 @@
     // Handicap progression with indoor/outdoor split and classification lines.
     const mode = state.mode[name] || defaultMode(entries);
     state.mode[name] = mode;
-    html += '<div class="card"><div class="card-head"><div><h2>Handicap progression: ' + escapeHtml(name) + "</h2>" +
+    html += '<div class="card"><div class="card-head"><div><div class="card-eyebrow">' + ICON.trend + "Handicap progression</div><h2>" + escapeHtml(name) + " handicap over time</h2>" +
       '<p class="card-note">' + (mode === "both"
         ? "Every shoot's round handicap, with the sheet's running handicap as the line. Choose indoor or outdoor to see classification thresholds."
         : "Each " + mode + " round's handicap, the line is the average of the last three. Dashed lines are " + mode + " classification thresholds for your category.") +
@@ -1201,7 +1515,8 @@
     html += nextCard(name, allEntries) + predictorCard(name, allEntries);
     html += claimCard(name, allEntries);
 
-    // Score trend for one round.
+    // Score trend for one round, beside notable results.
+    let trendHtml = "", notableHtml = "";
     const roundCounts = countBy(entries.filter(function (e) { return e.score !== null && e.round; }), function (e) { return e.round; });
     const trendRounds = Object.keys(roundCounts).filter(function (r) { return roundCounts[r] >= 2; })
       .sort(function (a, b) { return roundCounts[b] - roundCounts[a] || a.localeCompare(b); });
@@ -1211,7 +1526,7 @@
         tr = trendRounds.filter(function (r) { return !LADDER_RE.test(r); })[0] || trendRounds[0];
         state.trendRound[name] = tr;
       }
-      html += '<div class="card"><div class="card-head"><div><h2>Score trend by round</h2>' +
+      trendHtml = '<div class="card"><div class="card-head"><div><h2>Score trend by round</h2>' +
         '<p class="card-note">Every score on one round, with a rolling average of the last three and the next classification score where one applies.</p></div>' +
         '<label class="ctl">Round <select data-trend="' + escapeHtml(name) + '">' +
         trendRounds.map(function (r) {
@@ -1223,14 +1538,15 @@
     // Notable results.
     const notable = entries.filter(isNotable);
     if (notable.length) {
-      html += '<div class="card"><h2>Notable results</h2><div class="table-scroll"><table><thead><tr>' +
+      notableHtml = '<div class="card"><div class="card-eyebrow">' + ICON.star + 'Highlights</div><h2>Notable results</h2><p class="card-note">Placings and record-status shoots.</p><div class="table-scroll" style="max-height:300px"><table><thead><tr>' +
         '<th>Date</th><th>Round</th><th class="num">Score</th><th>Comment</th></tr></thead><tbody>';
       notable.slice().reverse().forEach(function (e) {
-        html += '<tr><td class="nowrap">' + fmtDate(e.date) + "</td><td>" + escapeHtml(e.round) + '</td><td class="num">' +
+        notableHtml += '<tr><td class="nowrap">' + fmtDate(e.date) + "</td><td>" + escapeHtml(e.round) + '</td><td class="num">' +
           (e.score !== null ? e.score : "-") + "</td><td>" + resultBadges(e) + escapeHtml(e.comment) + "</td></tr>";
       });
-      html += "</tbody></table></div></div>";
+      notableHtml += "</tbody></table></div></div>";
     }
+    html += gridRow([[7, trendHtml], [5, notableHtml]]);
 
     // Personal bests by round (the 252 ladder has its own table on the overview).
     const pb = {};
@@ -1289,7 +1605,7 @@
         .map(function (e) { return { x: e.date.getTime(), y: e.hcRunning, entry: e }; });
       datasets.push({
         label: "Running handicap", data: lineSeries, borderColor: color, backgroundColor: color,
-        borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, stepped: "before", order: 1, hcField: "hcRunning"
+        borderWidth: 2, pointRadius: function (c) { return c.dataIndex === c.dataset.data.length - 1 ? 4 : 0; }, pointBorderColor: surface, pointBorderWidth: 2, pointHoverRadius: 5, stepped: "before", order: 1, hcField: "hcRunning"
       });
     } else {
       const pts = shots.map(function (e) { return { x: e.date.getTime(), y: e.hcRound, entry: e }; });
@@ -1462,93 +1778,19 @@
     const disciplines = state.disciplines;
     const filtered = state.entries.filter(function (e) { return inSeason(e, state.season); });
     const special = filtered.filter(function (e) { return e.bucket === "Special" || e.bucket === "Other"; });
+    const standings = bowStandings();
+    const periodText = state.season === "all" ? "All time" : escapeHtml(seasonLabel(state.season));
 
-    let html = '<div class="tile-row">';
-    disciplines.forEach(function (d) {
-      const all = state.byBucket[d];
-      const outYear = classSeasonFor(state.season, "outdoor", state.now);
-      const inYear = classSeasonFor(state.season, "indoor", state.now);
-      const o = bestClass(all, "outdoor", outYear), i = bestClass(all, "indoor", inYear);
-      const withRun = all.filter(function (e) { return e.hcRunning !== null && inSeason(e, state.season); });
-      const run = withRun.length ? withRun[withRun.length - 1].hcRunning : null;
-      const lines = [];
-      const lastRun = withRun.length ? withRun[withRun.length - 1] : null;
-      if (run !== null) lines.push("Handicap " + run + (lastRun && lastRun.date < new Date(state.now.getTime() - 365 * 864e5) ? ' <span class="muted" title="No score for over 12 months: Archery GB handicaps lapse after a year">(lapsed)</span>' : ""));
-      if (o) lines.push(seasonName("outdoor", outYear) + ": " + escapeHtml(o.name));
-      if (i) lines.push(seasonName("indoor", inYear) + ": " + escapeHtml(i.name));
-      if (!o && !i) {
-        const lo = latestClass(all, "outdoor", outYear - 1), li = latestClass(all, "indoor", inYear - 1);
-        if (lo) lines.push(seasonName("outdoor", lo.year) + ": " + escapeHtml(lo.name));
-        if (li) lines.push(seasonName("indoor", li.year) + ": " + escapeHtml(li.name));
-        if (!lo && !li) lines.push("No classification scores yet");
-      }
-      const count = all.filter(function (e) { return inSeason(e, state.season); }).length;
-      html += tile('<a href="#' + slug(d) + '" data-nav="' + slug(d) + '" style="color:inherit">' + d + "</a>", count + (count === 1 ? " shoot" : " shoots"), lines.join("<br>"), DISCIPLINE_COLOR[d]);
-    });
-    html += "</div>";
-    html += strongestCard() + winterLeagueCard() + clubRecordsCard();
-
-    const events = [];
-    filtered.forEach(function (e) { e.events.forEach(function (ev) { events.push({ e: e, ev: ev }); }); });
-    if (events.length) {
-      html += '<div class="card"><h2>Recent achievements</h2><p class="card-note">New PBs, classification scores, 252 badges, handicap improvements and podiums, most recent first.</p>' +
-        '<div class="table-scroll" style="max-height:320px"><table><thead><tr><th>Date</th><th>What</th></tr></thead><tbody>';
-      events.slice(-40).reverse().forEach(function (x) {
-        const bow = DISCIPLINE_COLOR[x.e.bucket] ? '<span class="dot" style="background:var(' + DISCIPLINE_COLOR[x.e.bucket] + ')" aria-hidden="true"></span>' + x.e.bucket : "Club shoot";
-        html += '<tr><td class="nowrap">' + fmtDate(x.e.date) + '</td><td><span class="badge ev ev-' + x.ev.type + '">' +
-          EVENT_LABEL[x.ev.type] + "</span>" + escapeHtml(x.ev.text) + ' <span class="muted small nowrap">' + bow + "</span></td></tr>";
-      });
-      html += "</tbody></table></div></div>";
-    }
-
-    html += '<div class="card"><h2>Handicap progression: all bow types</h2>';
-    html += '<p class="card-note">Running handicap from the sheet for each bow type. Lower is better; the axis is inverted so an upward line means improvement.</p>';
-    html += '<div class="chart-box"><canvas id="chart-overview" role="img" aria-label="Running handicap by bow type over time"></canvas></div></div>';
-
-    // Activity.
-    if (filtered.length) {
-      const dates = filtered.map(function (e) { return e.date; });
-      const dayKeys = Array.from(new Set(dates.map(function (d) { return d.getTime(); }))).sort(function (a, b) { return a - b; });
-      let gap = 0, gapFrom = null, gapTo = null;
-      for (let k = 1; k < dayKeys.length; k++) {
-        const g = Math.round((dayKeys[k] - dayKeys[k - 1]) / 864e5);
-        if (g > gap) { gap = g; gapFrom = new Date(dayKeys[k - 1]); gapTo = new Date(dayKeys[k]); }
-      }
-      const monthCounts = countBy(filtered, function (e) { return e.date.getFullYear() * 12 + e.date.getMonth(); });
-      const busiestKey = Object.keys(monthCounts).sort(function (a, b) { return monthCounts[b] - monthCounts[a] || b - a; })[0];
-      const busiest = busiestKey ? new Date(Math.floor(busiestKey / 12), busiestKey % 12, 1) : null;
-      const yearAgo = new Date(state.now.getFullYear() - 1, state.now.getMonth(), state.now.getDate());
-      const last12 = state.entries.filter(function (e) { return e.date > yearAgo; }).length;
-      const roundsShot = new Set(filtered.map(function (e) { return e.round; }).filter(Boolean)).size;
-      const shootingDays = dayKeys.length;
-
-      html += '<div class="card"><h2>Activity</h2><p class="card-note">Shoots logged per month, by bow type.</p>';
-      html += '<div class="tile-row" style="margin-bottom:14px">';
-      html += tile("Last 12 months", last12 + " shoots", "all bow types");
-      html += tile("Shooting days", shootingDays, roundsShot + " different rounds");
-      html += tile("Busiest month", busiest ? MONTH_NAMES[busiest.getMonth()] + " " + busiest.getFullYear() : "-", busiest ? monthCounts[busiestKey] + " shoots" : "");
-      html += tile("Longest break", gap ? gap + " days" : "-", gapFrom ? fmtDate(gapFrom) + " to " + fmtDate(gapTo) : "");
-      html += "</div>";
-      html += '<div class="chart-box short"><canvas id="chart-activity" role="img" aria-label="Shoots per month by bow type"></canvas></div></div>';
-    }
-
-    // Trophy cabinet.
-    const notable = filtered.filter(isNotable).slice().reverse();
-    const podiums = notable.filter(function (e) { return e.placing && e.placing <= 3; }).length;
-    html += '<div class="card"><h2>Trophy cabinet</h2><p class="card-note">' + podiums + " podium finish" + (podiums === 1 ? "" : "es") +
-      " in this view, plus other placings and record-status shoots, most recent first.</p>";
-    if (notable.length) {
-      html += '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Bow type</th><th>Round</th><th class="num">Score</th><th>Comment</th></tr></thead><tbody>';
-      notable.forEach(function (e) {
-        html += '<tr><td class="nowrap">' + fmtDate(e.date) + "</td><td>" + escapeHtml(e.bowType || "Club shoot") + "</td><td>" + escapeHtml(e.round || "-") +
-          '</td><td class="num">' + (e.score !== null ? e.score : "-") + "</td><td>" + resultBadges(e) + escapeHtml(e.comment) + "</td></tr>";
-      });
-      html += "</tbody></table></div>";
-    } else {
-      html += '<p class="muted">No placings recorded in this view.</p>';
-    }
-    html += "</div>";
-
+    let html = gridRow([[8, heroCard(standings)], [4, bowSummaryCard(standings)]]);
+    html += kpiRow(standings);
+    html += gridRow([[8, overviewChartCard()], [4, insightsCard(standings)]]);
+    html += sectionTitle("Activity", "When and how much you shoot");
+    html += gridRow([[12, calendarCard()]]);
+    html += gridRow([[7, activityChartCard(filtered)], [5, timelineCard(filtered)]]);
+    html += sectionTitle("Competition and records", "Leagues, club records, badges and placings");
+    html += gridRow([[6, winterLeagueCard()], [6, clubRecordsCard()]]);
+    html += gridRow([[5, ladder252Card()], [7, trophyCard(filtered)]]);
+    html += sectionTitle("Scores", periodText);
     // Cross-discipline personal bests.
     const pbs = {};
     disciplines.forEach(function (d) {
@@ -1560,7 +1802,7 @@
     });
     const roundList = Array.from(new Set([].concat.apply([], disciplines.map(function (d) { return Object.keys(pbs[d]); })))).sort();
     if (roundList.length) {
-      html += '<div class="card"><h2>Personal bests by round</h2><p class="card-note">Best score for each round, across every bow type it has been shot with. Handicap in brackets.</p>';
+      html += '<div class="card"><h2>Personal bests by round</h2><p class="card-note">Best score for each round with every bow type it has been shot with. Round handicap in brackets.</p>';
       html += '<div class="table-wide-scroll"><table><thead><tr><th>Round</th>' +
         disciplines.map(function (d) { return '<th class="num">' + d + "</th>"; }).join("") + "</tr></thead><tbody>";
       roundList.forEach(function (r) {
@@ -1568,31 +1810,6 @@
         disciplines.forEach(function (d) {
           const e = pbs[d][r];
           html += '<td class="num">' + (e ? e.score + (e.hcRound !== null ? ' <span class="muted small">(' + e.hcRound + ")</span>" : "") : '<span class="status-pending">-</span>') + "</td>";
-        });
-        html += "</tr>";
-      });
-      html += "</tbody></table></div></div>";
-    }
-
-    // 252 ladder (always all-time: badges, once earned, are kept).
-    const ladderDisc = disciplines.filter(function (d) { return state.byBucket[d].some(function (e) { return e.isLadder; }); });
-    if (ladderDisc.length) {
-      html += '<div class="card"><h2>252 practice ladder</h2><p class="card-note">All time. A badge is earned once the qualifying score for that bow type and distance has been shot on ' +
-        LADDER_BADGE_COUNT + " separate occasions. Cells show best score / qualifying score.</p>";
-      html += '<div class="table-wide-scroll"><table><thead><tr><th>Distance</th>' +
-        ladderDisc.map(function (d) { return '<th class="num">' + d + "</th>"; }).join("") + "</tr></thead><tbody>";
-      const ladders = {};
-      ladderDisc.forEach(function (d) { ladders[d] = ladderStats(state.byBucket[d], d); });
-      LADDER_DISTANCES.forEach(function (dist) {
-        html += "<tr><td>" + dist + " yds</td>";
-        ladderDisc.forEach(function (d) {
-          const s = ladders[d][dist];
-          const t = (LADDER_BADGE_SCORE[d] || {})[dist] || LADDER_BADGE_DEFAULT;
-          let cell;
-          if (!s) cell = '<span class="status-pending">Not attempted</span>';
-          else if (s.qualifying >= LADDER_BADGE_COUNT) cell = '<span class="status-good">' + s.best.score + "/" + t + " · Badge earned</span>";
-          else cell = '<span class="status-warn">' + s.best.score + "/" + t + " · " + s.qualifying + " of " + LADDER_BADGE_COUNT + "</span>";
-          html += '<td class="num">' + cell + "</td>";
         });
         html += "</tr>";
       });
@@ -1636,7 +1853,8 @@
       pts.forEach(function (p) { xs.push(p.x); });
       datasets.push({
         label: d, data: pts, borderColor: color, backgroundColor: color, pointBackgroundColor: color, pointBorderColor: surface,
-        pointBorderWidth: 1.5, pointRadius: 3, pointHoverRadius: 6, borderWidth: 2, stepped: "before"
+        pointBorderWidth: 2, pointRadius: function (c) { return c.dataIndex === c.dataset.data.length - 1 ? 4 : 0; }, pointHoverRadius: 5, borderWidth: 2, stepped: "before",
+        hidden: !!(state.hiddenBows && state.hiddenBows[d])
       });
     });
     if (datasets.length) {
@@ -1654,7 +1872,7 @@
             }
           },
           plugins: {
-            legend: legendOpts(datasets.length > 1),
+            legend: legendOpts(false),
             tooltip: Object.assign(baseTooltip(), {
               callbacks: {
                 title: function (items) { const e = items[0] && items[0].raw && items[0].raw.entry; return e ? fmtDate(e.date) : ""; },
@@ -1682,7 +1900,7 @@
       return {
         label: disc, data: keys.map(function (k) { return counts[k] || 0; }),
         backgroundColor: color, borderColor: surface, borderWidth: { top: 2 }, borderSkipped: "bottom",
-        borderRadius: 3, maxBarThickness: 28
+        borderRadius: 4, maxBarThickness: 22
       };
     }).filter(function (ds) { return ds.data.some(function (v) { return v > 0; }); });
     makeChart("chart-activity", {
@@ -1988,7 +2206,7 @@
     const q = mine.quiver[0], qp = club ? pos(club.quiver, state.club.me) : null;
     rowsHtml += "<tr><td>Quiver Shiver</td><td>" + (q ? q.count + " of 4 rounds" : '<span class="muted">-</span>') + '</td><td class="num">-</td><td class="num">' + (q ? "<strong>" + q.total + "</strong>" : "-") +
       '</td><td class="num">' + (qp ? ordinal(qp.p) + ' <span class="muted small">of ' + qp.of + "</span>" : '<span class="muted">-</span>') + "</td></tr>";
-    return '<div class="card"><h2>Winter leagues ' + w.year + "/" + String(w.year + 1).slice(2) + (w.current ? "" : " (last season)") + '</h2><p class="card-note">Best single score on each league round from ' + fmtDate(range.from) + " to " + fmtDate(range.to) +
+    return '<div class="card"><div class="card-eyebrow">' + ICON.trend + 'Winter leagues</div><h2>Season ' + w.year + "/" + String(w.year + 1).slice(2) + (w.current ? "" : " (last season)") + '</h2><p class="card-note">Best single score on each league round from ' + fmtDate(range.from) + " to " + fmtDate(range.to) +
       " (clocks back to clocks forward), adjusted for bow type as the club's leagues are; recurve is unchanged. The Quiver Shiver adds each round's best score plus the handicap allowance. " +
       (club ? "Positions are among club members on the <a href=\"" + RECORDS_SITE + "#leagues\" target=\"_blank\" rel=\"noopener\">club records site</a>." : "") + "</p>" +
       '<div class="table-wide-scroll"><table><thead><tr><th>League</th><th>Bow</th><th class="num">Best</th><th class="num">Adjusted</th><th class="num">Position</th></tr></thead><tbody>' + rowsHtml + "</tbody></table></div></div>";
@@ -2034,7 +2252,7 @@
     });
     const held = Object.keys(best).map(function (k) { return best[k]; }).filter(function (r) { return r.id === state.club.me; })
       .sort(function (a, b) { return a.e.loc.localeCompare(b.e.loc) || a.e.bucket.localeCompare(b.e.bucket) || b.e.date - a.e.date; });
-    let html = '<div class="card"><h2>Club records held</h2><p class="card-note">Current club records (best score on each round for each bow type, men and women separately, indoor and outdoor) held by this archer, from the <a href="' + RECORDS_SITE + '" target="_blank" rel="noopener">club records site</a>.</p>';
+    let html = '<div class="card"><div class="card-eyebrow">' + ICON.badge + 'Duston Bowmen</div><h2>Club records held</h2><p class="card-note">Current club records (best score on each round for each bow type, men and women separately, indoor and outdoor) held by this archer, from the <a href="' + RECORDS_SITE + '" target="_blank" rel="noopener">club records site</a>.</p>';
     if (!held.length) return html + '<p class="muted">No club records held at the moment.</p></div>';
     html += '<div class="table-scroll"><table><thead><tr><th>Round</th><th>Category</th><th class="num">Score</th><th>Since</th></tr></thead><tbody>' +
       held.map(function (r) {
@@ -2132,30 +2350,595 @@
     return html + "</div>";
   }
 
+  // =====================================================================
+  // Premium UI components (redesign): icons, sparklines, KPI tiles, hero,
+  // bow summary, insights, calendar heatmap, timeline, 252 track, tooltips
+  // =====================================================================
+  const ICON = {
+    overview: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+    kit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+    sun: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>',
+    moon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>',
+    target: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+    trend: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>',
+    star: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>',
+    calendar: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+    badge: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11"/></svg>',
+    repeat: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>'
+  };
+
+  const DAY_MS = 864e5;
+  function monthKey(d) { return d.getFullYear() * 12 + d.getMonth(); }
+  function lastMonths(n) {
+    const out = [], d = new Date(state.now.getFullYear(), state.now.getMonth() - n + 1, 1);
+    for (let i = 0; i < n; i++) { out.push(monthKey(d)); d.setMonth(d.getMonth() + 1); }
+    return out;
+  }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : (many || one + "s")); }
+
+  // Inline SVG sparkline: 2px line, 10% wash, end dot with surface ring.
+  // invert = true draws lower values higher (handicaps).
+  function sparkSvg(values, colorVar, opts) {
+    opts = opts || {};
+    const vals = values.filter(function (v) { return v !== null && v !== undefined && isFinite(v); });
+    if (vals.length < 2) return "";
+    const w = 160, h = opts.height || 36, pad = 4;
+    let lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    if (hi === lo) { hi += 1; lo -= 1; }
+    const step = (w - pad * 2) / (values.length - 1);
+    const pts = [];
+    values.forEach(function (v, i) {
+      if (v === null || v === undefined || !isFinite(v)) return;
+      let t = (v - lo) / (hi - lo);
+      if (opts.invert) t = 1 - t;
+      pts.push([pad + i * step, h - pad - t * (h - pad * 2)]);
+    });
+    const line = pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+    const area = line + " L" + pts[pts.length - 1][0].toFixed(1) + " " + (h - 1) + " L" + pts[0][0].toFixed(1) + " " + (h - 1) + " Z";
+    const end = pts[pts.length - 1];
+    const color = "var(" + colorVar + ")";
+    return '<svg viewBox="0 0 ' + w + " " + h + '" width="100%" height="' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path d="' + area + '" fill="' + color + '" opacity="0.1"/>' +
+      '<path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
+      '<circle cx="' + end[0].toFixed(1) + '" cy="' + end[1].toFixed(1) + '" r="3.5" fill="' + color + '" stroke="var(--surface-1)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>';
+  }
+
+  function deltaHtml(diff, betterWhenLower, suffix) {
+    if (diff === null || diff === undefined || !isFinite(diff)) return "";
+    const rounded = Math.round(diff * 10) / 10;
+    if (rounded === 0) return '<span class="delta flat">no change' + (suffix ? (suffix === "%" ? "" : " ") + suffix : "") + "</span>";
+    const good = betterWhenLower ? rounded < 0 : rounded > 0;
+    const arrow = rounded > 0 ? "↑" : "↓";
+    return '<span class="delta ' + (good ? "up" : "down") + '">' + arrow + " " + Math.abs(rounded) + (suffix ? (suffix === "%" ? "" : " ") + suffix : "") + "</span>";
+  }
+
+  // KPI tile. opts: { spark, delta, unit, tip }
+  function kpi(label, value, small, opts) {
+    opts = opts || {};
+    return '<div class="tile"' + (opts.tip ? ' title="' + escapeHtml(opts.tip) + '"' : "") + '><div class="label">' + label + '</div><div class="value">' + value +
+      (opts.unit ? '<span class="unit">' + opts.unit + "</span>" : "") + (opts.delta || "") +
+      (small ? "<small>" + small + "</small>" : "") + "</div>" + (opts.spark ? '<div class="spark">' + opts.spark + "</div>" : "") + "</div>";
+  }
+
+  function col(span, html) { return html ? '<div class="span-' + span + ' col">' + html + "</div>" : ""; }
+
+  // Latest running handicap and classification level for each bow.
+  function bowStandings() {
+    const yearAgo = new Date(state.now.getTime() - YEAR_MS);
+    return state.disciplines.map(function (b) {
+      const all = state.byBucket[b];
+      const last = latestRunning(all);
+      if (!last) return null;
+      const prof = profileFor(all);
+      const before = latestRunning(all.filter(function (e) { return e.date <= yearAgo; }));
+      const lvlO = classLevel(last.hcRunning, "outdoor", b, prof.gender, prof.age);
+      const lvlI = classLevel(last.hcRunning, "indoor", b, prof.gender, prof.age);
+      const series = all.filter(function (e) { return e.hcRunning !== null; });
+      return {
+        bow: b, hc: last.hcRunning, last: last, lapsed: last.date < yearAgo, prof: prof,
+        lvlO: lvlO, lvlI: lvlI, lvl: Math.max(lvlO || 0, lvlI || 0),
+        yearChange: before ? last.hcRunning - before.hcRunning : null,
+        series: series
+      };
+    }).filter(Boolean);
+  }
+
+  // --- Hero: the headline standard and the classification ladder ---
+  function heroCard(standings) {
+    const active = standings.filter(function (s) { return !s.lapsed; });
+    const pool = active.length ? active : standings;
+    if (!pool.length) return "";
+    const top = pool.slice().sort(function (a, b) { return (b.lvlO || 0) - (a.lvlO || 0); })[0];
+    const lvl = top.lvlO;
+    const cls = lvl === null ? null : Math.min(Math.floor(lvl), 9);
+    const clsName = cls && cls >= 1 ? OUTDOOR_ORDER[cls - 1] : null;
+    const nextName = cls !== null && cls < 9 ? OUTDOOR_ORDER[Math.max(cls, 0)] : null;
+    const toNext = lvl !== null && cls < 9 ? Math.max(0.1, Math.round((Math.floor(lvl) + 1 - lvl) * 10) / 10) : null;
+    let caption = "Your <strong>" + top.bow.toLowerCase() + "</strong> handicap of " + top.hc + " is " +
+      (clsName ? "<strong>" + clsName + "</strong> standard outdoors" : "below Archer 3rd Class standard outdoors") +
+      (nextName && toNext !== null ? ", " + toNext.toFixed(1) + " of a class off " + nextName + "." : ".");
+    if (top.yearChange !== null) caption += top.yearChange < 0 ? " Down " + plural(-top.yearChange, "point") + " in the last 12 months." :
+      top.yearChange > 0 ? " Up " + plural(top.yearChange, "point") + " in the last 12 months." : " Unchanged over the last 12 months.";
+    const pins = standings.filter(function (s) { return s.lvlO !== null; }).map(function (s) {
+      return { lvl: s.lvlO, colorVar: DISCIPLINE_COLOR[s.bow], tip: s.bow, sub: "Handicap " + s.hc + " · level " + s.lvlO.toFixed(1) + " (" + levelName(s.lvlO, "outdoor") + ")" + (s.lapsed ? " · lapsed" : ""), label: s.bow + " level " + s.lvlO.toFixed(1) };
+    });
+    const legend = standings.map(function (s) {
+      return '<span><i class="dot" style="background:var(' + DISCIPLINE_COLOR[s.bow] + ')"></i>' + s.bow + " <b>" + (s.lvlO !== null ? escapeHtml(levelName(s.lvlO, "outdoor")) : "-") + "</b>" + (s.lapsed ? ' <span class="tag lapsed">lapsed</span>' : "") + "</span>";
+    }).join("");
+    return '<div class="card hero">' +
+      '<div class="hero-top"><div><div class="card-eyebrow">' + ICON.target + "Current standard · " + escapeHtml(top.bow) + "</div>" +
+      '<div class="hero-figure">' + top.hc + '<span class="unit">handicap</span>' + deltaHtml(top.yearChange, true, "in 12 mo") + "</div>" +
+      '<p class="hero-caption">' + caption + "</p></div>" +
+      '<div class="chips">' + (clsName ? '<span class="chip"><i class="dot" style="background:var(' + DISCIPLINE_COLOR[top.bow] + ')"></i>' + escapeHtml(clsName) + "</span>" : "") +
+      '<span class="chip">Level ' + (lvl !== null ? lvl.toFixed(1) : "-") + " of 9</span></div></div>" +
+      ladderHtml("outdoor", pins, lvl, DISCIPLINE_COLOR[top.bow], legend) +
+      '<p class="card-note" style="margin:14px 0 0">Each bow\'s running handicap placed on the Archery GB outdoor classification ladder for that bow, so bows compare fairly: the same handicap is a different standard on a barebow and a compound.</p></div>';
+  }
+
+  // --- Bow summary list ---
+  function bowSummaryCard(standings) {
+    if (!state.disciplines.length) return "";
+    const rows = state.disciplines.map(function (b) {
+      const s = standings.filter(function (x) { return x.bow === b; })[0];
+      const all = state.byBucket[b];
+      const shots = all.filter(function (e) { return inSeason(e, state.season); }).length;
+      const outYear = classSeasonFor(state.season, "outdoor", state.now), inYear = classSeasonFor(state.season, "indoor", state.now);
+      const o = bestClass(all, "outdoor", outYear) || latestClass(all, "outdoor", outYear - 1);
+      const i = bestClass(all, "indoor", inYear) || latestClass(all, "indoor", inYear - 1);
+      const sub = [o ? o.name : null, i ? i.name : null].filter(Boolean).join(" · ") || "No classification yet";
+      const spark = s ? sparkSvg(s.series.slice(-12).map(function (e) { return e.hcRunning; }), DISCIPLINE_COLOR[b], { invert: true, height: 26 }) : "";
+      return '<a class="bow-row" href="#' + slug(b) + '" data-nav="' + slug(b) + '"><span class="bow-bar" style="background:var(' + DISCIPLINE_COLOR[b] + ')"></span>' +
+        '<span style="min-width:0"><span class="bow-name">' + b + "</span>" + (s && s.lapsed ? '<span class="tag lapsed">lapsed</span>' : "") +
+        '<span class="bow-sub" style="display:block">' + plural(shots, "shoot") + " · " + escapeHtml(sub) + "</span>" +
+        (spark ? '<span style="display:block;width:120px;margin-top:6px">' + spark + "</span>" : "") + "</span>" +
+        '<span class="bow-hc"><b>' + (s ? s.hc : "-") + "</b><span>handicap</span></span></a>";
+    }).join("");
+    return '<div class="card"><div class="card-head"><div><h2>Bow types</h2><p class="card-note" style="margin-bottom:6px">Running handicap and best classification for each bow. Select one for its full analysis.</p></div></div><div class="bow-list">' + rows + "</div></div>";
+  }
+
+  // Entries in the chosen period: the season filter, or the last 12 months.
+  function periodInfo() {
+    if (state.season !== "all") {
+      return { list: state.entries.filter(function (e) { return inSeason(e, state.season); }), label: "in " + seasonLabel(state.season), prev: null };
+    }
+    const from = new Date(state.now.getTime() - YEAR_MS), prevFrom = new Date(state.now.getTime() - 2 * YEAR_MS);
+    return {
+      list: state.entries.filter(function (e) { return e.date > from; }),
+      prev: state.entries.filter(function (e) { return e.date > prevFrom && e.date <= from; }),
+      label: "last 12 months"
+    };
+  }
+
+  function kpiRow(standings) {
+    const p = periodInfo();
+    const months = lastMonths(12);
+    const byMonth = function (list, fn) { const m = {}; list.forEach(function (e) { const k = monthKey(e.date); m[k] = (m[k] || 0) + fn(e); }); return months.map(function (k) { return m[k] || 0; }); };
+    const shoots = p.list.length, arrows = p.list.reduce(function (s, e) { return s + (e.arrows || 0); }, 0);
+    const pbs = p.list.filter(function (e) { return e.events.some(function (x) { return x.type === "pb"; }); }).length;
+    const prevShoots = p.prev ? p.prev.length : null, prevArrows = p.prev ? p.prev.reduce(function (s, e) { return s + (e.arrows || 0); }, 0) : null;
+    const prevPbs = p.prev ? p.prev.filter(function (e) { return e.events.some(function (x) { return x.type === "pb"; }); }).length : null;
+    const recent = state.entries.filter(function (e) { return e.date > new Date(state.now.getTime() - YEAR_MS); });
+    const sparkSrc = state.season === "all" ? recent : p.list;
+    const active = standings.filter(function (s) { return !s.lapsed; });
+    const best = (active.length ? active : standings).slice().sort(function (a, b) { return a.hc - b.hc; })[0];
+    let html = '<div class="tile-row">';
+    html += kpi("Shoots logged", shoots.toLocaleString("en-GB"), p.label, {
+      delta: prevShoots !== null ? deltaHtml(shoots - prevShoots, false) : "",
+      spark: state.season === "all" ? sparkSvg(byMonth(sparkSrc, function () { return 1; }), "--text-muted", { height: 30 }) : "",
+      tip: prevShoots !== null ? "Previous 12 months: " + prevShoots : ""
+    });
+    html += kpi("Arrows shot", "~" + arrows.toLocaleString("en-GB"), "on recognised rounds, " + p.label, {
+      delta: prevArrows ? deltaHtml(Math.round((arrows - prevArrows) / prevArrows * 100), false, "%") : "",
+      spark: state.season === "all" ? sparkSvg(byMonth(sparkSrc, function (e) { return e.arrows || 0; }), "--text-muted", { height: 30 }) : ""
+    });
+    html += kpi("Personal bests", pbs, "scores beating a previous best, " + p.label, {
+      delta: prevPbs !== null ? deltaHtml(pbs - prevPbs, false) : "",
+      spark: state.season === "all" ? sparkSvg(byMonth(sparkSrc, function (e) { return e.events.some(function (x) { return x.type === "pb"; }) ? 1 : 0; }), "--text-muted", { height: 30 }) : ""
+    });
+    if (best) {
+      html += kpi('<i class="dot" style="background:var(' + DISCIPLINE_COLOR[best.bow] + ')"></i>Lowest handicap', best.hc, best.bow + (best.lapsed ? " (lapsed)" : "") + " · best ever " +
+        Math.min.apply(null, best.series.map(function (e) { return e.hcRunning; })), {
+        delta: deltaHtml(best.yearChange, true),
+        spark: sparkSvg(best.series.filter(function (e) { return e.date > new Date(state.now.getTime() - 2 * YEAR_MS); }).map(function (e) { return e.hcRunning; }), DISCIPLINE_COLOR[best.bow], { invert: true, height: 30 })
+      });
+    }
+    return html + "</div>";
+  }
+
+  // --- Insights: short, specific sentences worked out from the data ---
+  function insightsCard(standings) {
+    const items = [];
+    const active = standings.filter(function (s) { return !s.lapsed; });
+    const top = (active.length ? active : standings).slice().sort(function (a, b) { return (b.lvlO || 0) - (a.lvlO || 0); })[0];
+    if (top) {
+      // Next classification on the round this bow shoots most outdoors.
+      const all = state.byBucket[top.bow];
+      const year = state.now.getFullYear();
+      const cur = bestClass(all, "outdoor", year) || latestClass(all, "outdoor", year - 1);
+      const nextRank = cur ? Math.min(cur.rank + 1, OUTDOOR_ORDER.length - 1) : 0;
+      const counts = {};
+      all.forEach(function (e) { if (e.loc === "outdoor" && e.code && !e.isLadder && e.score !== null && AGB.classScores(e.code, top.bow, top.prof.gender, top.prof.age)) counts[e.code] = (counts[e.code] || 0) + 1; });
+      const code = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).filter(function (c) { const t = AGB.classScores(c, top.bow, top.prof.gender, top.prof.age); return t && t[nextRank] !== null; })[0];
+      if (code) {
+        const need = AGB.classScores(code, top.bow, top.prof.gender, top.prof.age)[nextRank];
+        const pb = Math.max.apply(null, all.filter(function (e) { return e.code === code && e.score !== null; }).map(function (e) { return e.score; }));
+        items.push({ ico: ICON.target, html: "<strong>" + escapeHtml(OUTDOOR_ORDER[nextRank]) + "</strong> needs " + need + " on a " + escapeHtml(AGB.round(code).n) + " with your " + top.bow.toLowerCase() +
+          (isFinite(pb) ? (pb >= need ? ": your PB of " + pb + " already gets there." : ", " + (need - pb) + " above your PB of " + pb + ".") : ".") });
+      }
+      // Form: last five round handicaps against the five before.
+      const rounds = all.filter(function (e) { return e.hcRound !== null && !e.isLadder; });
+      if (rounds.length >= 8) {
+        const avg = function (l) { return l.reduce(function (s, e) { return s + e.hcRound; }, 0) / l.length; };
+        const a = avg(rounds.slice(-5)), b = avg(rounds.slice(-10, -5));
+        const d = Math.round((b - a) * 10) / 10;
+        items.push({ ico: ICON.trend, html: "Your last five " + top.bow.toLowerCase() + " rounds averaged handicap <strong>" + (Math.round(a * 10) / 10) + "</strong>, " +
+          (d > 0 ? d + " better than the five before." : d < 0 ? (-d) + " worse than the five before." : "level with the five before.") });
+      }
+    }
+    // Most-shot round.
+    const roundCounts = countBy(state.entries.filter(function (e) { return e.code && !e.isLadder; }), function (e) { return xKey(e); });
+    const fav = Object.keys(roundCounts).sort(function (a, b) { return roundCounts[b] - roundCounts[a]; })[0];
+    if (fav) items.push({ ico: ICON.repeat, html: "<strong>" + escapeHtml(xLabel(fav, {})) + "</strong> is your most-shot round, " + plural(roundCounts[fav], "time") + " on file." });
+    // Consistency over the last 12 months.
+    const months = lastMonths(12), seen = {};
+    state.entries.forEach(function (e) { seen[monthKey(e.date)] = true; });
+    const active12 = months.filter(function (k) { return seen[k]; }).length;
+    items.push({ ico: ICON.calendar, html: "You've shot in <strong>" + active12 + " of the last 12 months</strong>" + (active12 === 12 ? ", without a gap." : ".") });
+    // Next 252 badge to chase.
+    let chase = null;
+    state.disciplines.forEach(function (d) {
+      const st = ladderStats(state.byBucket[d], d);
+      LADDER_DISTANCES.forEach(function (dist) {
+        const s = st[dist];
+        if (!s || s.qualifying >= LADDER_BADGE_COUNT || chase) return;
+        const t = (LADDER_BADGE_SCORE[d] || {})[dist] || LADDER_BADGE_DEFAULT;
+        chase = { d: d, dist: dist, s: s, t: t };
+      });
+    });
+    if (chase) items.push({ ico: ICON.badge, html: "Next 252 badge: <strong>" + chase.dist + " yds " + chase.d.toLowerCase() + "</strong>. Best so far " + chase.s.best.score + " of " + chase.t + ", with " + chase.s.qualifying + " of " + LADDER_BADGE_COUNT + " qualifying scores." });
+    if (!items.length) return "";
+    return '<div class="card"><h2>Insights</h2><p class="card-note" style="margin-bottom:4px">Worked out from your scores and the Archery GB tables.</p><ul class="insights">' +
+      items.slice(0, 5).map(function (i) { return '<li><span class="ins-ico" aria-hidden="true">' + i.ico + "</span><span>" + i.html + "</span></li>"; }).join("") + "</ul></div>";
+  }
+
+  // --- Calendar heatmap of shooting days ---
+  function heatRange() {
+    const m = /^(out|in|yr)-(\d{4})$/.exec(state.season);
+    if (m && m[1] === "in") return { from: new Date(+m[2], 6, 1), to: new Date(+m[2] + 1, 5, 30), label: "Indoor " + indoorLabel(+m[2]) };
+    if (m) return { from: new Date(+m[2], 0, 1), to: new Date(+m[2], 11, 31), label: m[2] };
+    const to = new Date(state.now.getFullYear(), state.now.getMonth(), state.now.getDate());
+    return { from: new Date(to.getTime() - 364 * DAY_MS), to: to, label: "Last 12 months" };
+  }
+  function heatmapCard() {
+    const r = heatRange();
+    const byDay = {};
+    state.entries.forEach(function (e) {
+      if (e.date < r.from || e.date > r.to) return;
+      const k = e.date.getFullYear() + "-" + e.date.getMonth() + "-" + e.date.getDate();
+      (byDay[k] = byDay[k] || []).push(e);
+    });
+    // Weeks start on Monday.
+    const start = new Date(r.from); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    const cell = 12, gap = 3, left = 28, top = 18;
+    const weeks = Math.ceil((r.to - start) / DAY_MS / 7) + 1;
+    const w = left + weeks * (cell + gap), h = top + 7 * (cell + gap);
+    let svg = "", monthLabels = "", lastMonth = -1, days = 0, shoots = 0;
+    for (let wk = 0; wk < weeks; wk++) {
+      for (let dow = 0; dow < 7; dow++) {
+        const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + wk * 7 + dow);
+        if (d < r.from || d > r.to) continue;
+        if (dow === 0 && d.getMonth() !== lastMonth && d.getDate() <= 7) {
+          lastMonth = d.getMonth();
+          monthLabels += '<text x="' + (left + wk * (cell + gap)) + '" y="11" font-size="10" fill="var(--text-muted)">' + MONTH_NAMES[d.getMonth()] + "</text>";
+        }
+        const list = byDay[d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate()] || [];
+        const n = list.length;
+        if (n) { days++; shoots += n; }
+        const lvl = n === 0 ? 0 : Math.min(4, n + 1);
+        const tipSub = n ? list.map(function (e) { return (e.round || "Club shoot") + (e.score !== null ? " " + e.score : "") + (e.bucket && DISCIPLINE_COLOR[e.bucket] ? " (" + e.bucket.toLowerCase() + ")" : ""); }).join(" · ") : "No shoots";
+        svg += '<rect class="heat-cell" x="' + (left + wk * (cell + gap)) + '" y="' + (top + dow * (cell + gap)) + '" width="' + cell + '" height="' + cell + '" rx="2.5" fill="var(--heat-' + lvl + ')"' +
+          ' data-tip="' + escapeHtml(fmtDate(d) + (n ? " · " + plural(n, "shoot") : "")) + '" data-tip-sub="' + escapeHtml(tipSub) + '"/>';
+      }
+    }
+    const dayLabels = ["Mon", "", "Wed", "", "Fri", "", ""].map(function (t, i) { return t ? '<text x="0" y="' + (top + i * (cell + gap) + 10) + '" font-size="10" fill="var(--text-muted)">' + t + "</text>" : ""; }).join("");
+    return '<div class="card"><div class="card-head"><div><h2>Shooting calendar</h2><p class="card-note">' + escapeHtml(r.label) + ": " + plural(days, "shooting day") + ", " + plural(shoots, "shoot") + ". Hover a day for what was shot.</p></div></div>" +
+      '<div class="heat-wrap"><svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="Calendar of shooting days">' + monthLabels + dayLabels + svg + "</svg></div>" +
+      '<div class="heat-foot"><span>Each square is a day; darker means more shoots logged.</span><span class="heat-scale">Less ' + [0, 2, 3, 4].map(function (l) { return '<i style="background:var(--heat-' + l + ')"></i>'; }).join("") + " More</span></div></div>";
+  }
+
+  // --- Activity stats beside the calendar ---
+  function activityStatsCard(filtered) {
+    if (!filtered.length) return "";
+    const dayKeys = Array.from(new Set(filtered.map(function (e) { return new Date(e.date.getFullYear(), e.date.getMonth(), e.date.getDate()).getTime(); }))).sort(function (a, b) { return a - b; });
+    let gap = 0, gapFrom = null, gapTo = null;
+    for (let k = 1; k < dayKeys.length; k++) {
+      const g = Math.round((dayKeys[k] - dayKeys[k - 1]) / DAY_MS);
+      if (g > gap) { gap = g; gapFrom = new Date(dayKeys[k - 1]); gapTo = new Date(dayKeys[k]); }
+    }
+    const mc = countBy(filtered, function (e) { return monthKey(e.date); });
+    const bk = Object.keys(mc).sort(function (a, b) { return mc[b] - mc[a] || b - a; })[0];
+    const busiest = bk ? new Date(Math.floor(bk / 12), bk % 12, 1) : null;
+    // Weekly streak: consecutive weeks with a shoot, ending this week or last.
+    const weekOf = function (t) { const d = new Date(t); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return Math.round(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / (7 * DAY_MS)); };
+    const weeks = new Set(state.entries.map(function (e) { return weekOf(e.date.getTime()); }));
+    let w = weekOf(state.now.getTime()), streak = 0;
+    if (!weeks.has(w)) w--;
+    while (weeks.has(w)) { streak++; w--; }
+    const rows = [
+      ["Shooting days", dayKeys.length, plural(new Set(filtered.map(function (e) { return e.round; }).filter(Boolean)).size, "different round")],
+      ["Busiest month", busiest ? MONTH_NAMES[busiest.getMonth()] + " " + busiest.getFullYear() : "-", busiest ? plural(mc[bk], "shoot") : ""],
+      ["Weekly streak", plural(streak, "week"), "in a row with a shoot"],
+      ["Longest break", gap ? plural(gap, "day") : "-", gapFrom ? fmtDate(gapFrom) + " to " + fmtDate(gapTo) : ""]
+    ];
+    return '<div class="card"><h2>Activity</h2><p class="card-note" style="margin-bottom:6px">' + (state.season === "all" ? "All time." : escapeHtml(seasonLabel(state.season)) + ".") + "</p>" +
+      '<div class="bow-list">' + rows.map(function (r) {
+        return '<div class="bow-row" style="grid-template-columns:minmax(0,1fr) auto"><span><span class="bow-name" style="font-weight:500;color:var(--text-secondary)">' + r[0] + '</span><span class="bow-sub" style="display:block">' + escapeHtml(r[2]) + '</span></span><span class="bow-hc"><b style="font-size:1.05rem">' + r[1] + "</b></span></div>";
+      }).join("") + "</div></div>";
+  }
+
+  // --- Timeline of achievements ---
+  function timelineCard(filtered) {
+    const events = [];
+    filtered.forEach(function (e) { e.events.forEach(function (ev) { events.push({ e: e, ev: ev }); }); });
+    if (!events.length) return "";
+    const items = events.slice(-40).reverse().map(function (x) {
+      const c = DISCIPLINE_COLOR[x.e.bucket] ? "var(" + DISCIPLINE_COLOR[x.e.bucket] + ")" : "var(--text-faint)";
+      return '<li><span class="t-date">' + fmtDate(x.e.date) + '</span><span class="t-node"><i style="background:' + c + '"></i></span><span class="t-body"><span class="badge ev ev-' + x.ev.type + '">' +
+        EVENT_LABEL[x.ev.type] + "</span>" + escapeHtml(x.ev.text) + "</span></li>";
+    }).join("");
+    return '<div class="card"><h2>Recent achievements</h2><p class="card-note">PBs, classification scores, 252 badges, handicap improvements and podiums. The dot shows the bow.</p><div class="scroll-y"><ul class="timeline">' + items + "</ul></div></div>";
+  }
+
+  // --- 252 ladder as a progress track ---
+  function ladder252Card() {
+    const discs = state.disciplines.filter(function (d) { return state.byBucket[d].some(function (e) { return e.isLadder; }); });
+    if (!discs.length) return "";
+    let earned = 0;
+    const rows = discs.map(function (d) {
+      const st = ladderStats(state.byBucket[d], d);
+      const steps = LADDER_DISTANCES.map(function (dist) {
+        const s = st[dist], t = (LADDER_BADGE_SCORE[d] || {})[dist] || LADDER_BADGE_DEFAULT;
+        if (!s) return '<span class="l252-step" data-tip="' + dist + ' yds" data-tip-sub="Not attempted yet"></span>';
+        const done = s.qualifying >= LADDER_BADGE_COUNT;
+        if (done) earned++;
+        return '<span class="l252-step ' + (done ? "done" : "part") + '" style="--step-color:var(' + DISCIPLINE_COLOR[d] + ')" tabindex="0" data-tip="' + dist + " yds · " + (done ? "badge earned" : s.qualifying + " of " + LADDER_BADGE_COUNT + " qualifying") +
+          '" data-tip-sub="Best ' + s.best.score + " of " + t + " needed · " + plural(s.attempts, "attempt") + '">' + (done ? "✓" : s.best.score) + "</span>";
+      }).join("");
+      return '<div class="l252-row"><span class="l252-name"><i class="dot" style="background:var(' + DISCIPLINE_COLOR[d] + ')"></i>' + d + '</span><span class="l252-track">' + steps + "</span></div>";
+    }).join("");
+    return '<div class="card"><div class="card-head"><div><h2>252 badges</h2><p class="card-note">' + plural(earned, "badge") + " earned. A badge needs the qualifying score twice; filled steps are earned, outlined ones show your best so far.</p></div></div>" +
+      '<div class="ladder252">' + rows + '<div class="l252-dist"><span></span><div>' + LADDER_DISTANCES.map(function (d) { return "<span>" + d + "y</span>"; }).join("") + "</div></div></div></div>";
+  }
+
+  // --- One floating tooltip for SVG/HTML marks (text only, set with textContent) ---
+  (function tipInit() {
+    const tip = document.getElementById("vizTip");
+    if (!tip) return;
+    let cur = null;
+    function show(el, x, y) {
+      tip.textContent = "";
+      const b = document.createElement("b"); b.textContent = el.getAttribute("data-tip"); tip.appendChild(b);
+      const sub = el.getAttribute("data-tip-sub");
+      if (sub) { const s = document.createElement("div"); s.className = "tip-sub"; s.textContent = sub; tip.appendChild(s); }
+      tip.classList.add("show");
+      const r = tip.getBoundingClientRect();
+      let left = x + 14, topY = y + 14;
+      if (left + r.width > innerWidth - 8) left = x - r.width - 14;
+      if (topY + r.height > innerHeight - 8) topY = y - r.height - 14;
+      tip.style.left = Math.max(8, left) + "px"; tip.style.top = Math.max(8, topY) + "px";
+    }
+    document.addEventListener("pointerdown", function (ev) {
+      const el = ev.target.closest && ev.target.closest("[data-tip]");
+      if (el) { cur = el; show(el, ev.clientX, ev.clientY); }
+    });
+    document.addEventListener("pointermove", function (ev) {
+      if (ev.pointerType === "touch") return;
+      const el = ev.target.closest && ev.target.closest("[data-tip]");
+      if (!el) { if (cur) { tip.classList.remove("show"); cur = null; } return; }
+      cur = el; show(el, ev.clientX, ev.clientY);
+    });
+    document.addEventListener("focusin", function (ev) {
+      const el = ev.target.closest && ev.target.closest("[data-tip]");
+      if (!el) return;
+      const r = el.getBoundingClientRect(); cur = el; show(el, r.right, r.bottom);
+    });
+    document.addEventListener("focusout", function () { tip.classList.remove("show"); cur = null; });
+    window.addEventListener("scroll", function () { tip.classList.remove("show"); cur = null; }, { passive: true });
+  })();
+
+
+  // --- Layout helpers ---
+  // A row of cards; if one is empty the other takes the full width.
+  function gridRow(cells) {
+    const live = cells.filter(function (c) { return c[1]; });
+    if (!live.length) return "";
+    if (live.length === 1) return '<div class="grid">' + col(12, live[0][1]) + "</div>";
+    return '<div class="grid">' + live.map(function (c) { return col(c[0], c[1]); }).join("") + "</div>";
+  }
+  function sectionTitle(title, sub) {
+    return '<div class="section-title"><h2>' + title + "</h2>" + (sub ? "<p>" + sub + "</p>" : "") + "</div>";
+  }
+  // Label / value / note rows, used for compact fact lists.
+  function factList(rows) {
+    return '<div class="bow-list">' + rows.map(function (r) {
+      return '<div class="bow-row fact-row"><span style="min-width:0"><span class="fact-label">' + r[0] + '</span><span class="bow-sub" style="display:block">' + (r[2] || "") +
+        '</span></span><span class="bow-hc"><b class="fact-value">' + r[1] + "</b></span></div>";
+    }).join("") + "</div>";
+  }
+
+  // Classification ladder bar. pins: [{ lvl, colorVar, tip, sub, label }]
+  function ladderHtml(loc, pins, fillLvl, fillVar, legend) {
+    const labels = SHORT[loc].map(function (s) { return s.replace(/^I-/, ""); });
+    const n = labels.length;
+    const pos = function (l) { return Math.max(0, Math.min(100, ((l || 0) - 1) / n * 100)); };
+    const ticks = labels.map(function () { return "<span></span>"; }).join("");
+    const pinHtml = pins.filter(function (p) { return p.lvl !== null && p.lvl !== undefined; }).map(function (p) {
+      return '<span class="ladder-pin" style="left:' + pos(p.lvl).toFixed(2) + "%;background:var(" + p.colorVar + ')" data-tip="' + escapeHtml(p.tip) + '" data-tip-sub="' + escapeHtml(p.sub) +
+        '" tabindex="0" aria-label="' + escapeHtml(p.label) + '"></span>';
+    }).join("");
+    const fill = fillLvl !== null && fillLvl !== undefined ? '<div class="ladder-fill" style="width:' + pos(fillLvl).toFixed(2) + "%;background:linear-gradient(90deg, transparent, var(" + fillVar + '));opacity:.35"></div>' : "";
+    return '<div class="ladder" role="img" aria-label="' + (loc === "indoor" ? "Indoor" : "Outdoor") + ' classification ladder">' +
+      '<div class="ladder-track"><div class="ladder-ticks">' + ticks + "</div>" + fill + pinHtml + "</div>" +
+      '<div class="ladder-labels" style="grid-template-columns:repeat(' + n + ',1fr)">' + labels.map(function (s) { return "<span>" + s + "</span>"; }).join("") + "</div>" +
+      (legend ? '<div class="ladder-legend">' + legend + "</div>" : "") + "</div>";
+  }
+
+  // --- Overview: handicap chart card with legend toggles ---
+  function overviewChartCard() {
+    const series = state.disciplines.filter(function (d) { return state.byBucket[d].some(function (e) { return e.hcRunning !== null && inSeason(e, state.season); }); });
+    state.hiddenBows = state.hiddenBows || {};
+    const legend = series.length > 1 ? '<div class="legend" role="group" aria-label="Bows shown on the chart">' + series.map(function (d) {
+      return '<button type="button" data-legend="' + escapeHtml(d) + '" aria-pressed="' + !state.hiddenBows[d] + '"><i class="dot" style="background:var(' + DISCIPLINE_COLOR[d] + ')"></i>' + d + "</button>";
+    }).join("") + "</div>" : "";
+    return '<div class="card"><div class="card-head"><div><div class="card-eyebrow">' + ICON.trend + "Handicap progression</div><h2>" +
+      (series.length === 1 ? "Running handicap: " + series[0] : "Running handicap by bow") + "</h2>" +
+      '<p class="card-note">From the sheet. Lower is better, so the axis is inverted and an upward line means improvement.' + (legend ? " Select a bow to hide or show it." : "") + "</p></div>" + legend + "</div>" +
+      '<div class="chart-box"><canvas id="chart-overview" role="img" aria-label="Running handicap by bow type over time"></canvas></div></div>';
+  }
+
+  // --- Overview: calendar heatmap with an activity strip ---
+  function streakWeeks() {
+    const weekOf = function (t) { const d = new Date(t); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return Math.round(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / (7 * DAY_MS)); };
+    const weeks = new Set(state.entries.map(function (e) { return weekOf(e.date.getTime()); }));
+    let w = weekOf(state.now.getTime()), streak = 0;
+    if (!weeks.has(w)) w--;
+    while (weeks.has(w)) { streak++; w--; }
+    return streak;
+  }
+  function activityStrip(list) {
+    if (!list.length) return "";
+    const dayKeys = Array.from(new Set(list.map(function (e) { return new Date(e.date.getFullYear(), e.date.getMonth(), e.date.getDate()).getTime(); }))).sort(function (a, b) { return a - b; });
+    let gap = 0, gapFrom = null, gapTo = null;
+    for (let k = 1; k < dayKeys.length; k++) {
+      const g = Math.round((dayKeys[k] - dayKeys[k - 1]) / DAY_MS);
+      if (g > gap) { gap = g; gapFrom = new Date(dayKeys[k - 1]); gapTo = new Date(dayKeys[k]); }
+    }
+    const mc = countBy(list, function (e) { return monthKey(e.date); });
+    const bk = Object.keys(mc).sort(function (a, b) { return mc[b] - mc[a] || b - a; })[0];
+    const busiest = bk ? new Date(Math.floor(bk / 12), bk % 12, 1) : null;
+    const streak = streakWeeks();
+    const cells = [
+      ["Shooting days", dayKeys.length, plural(new Set(list.map(function (e) { return e.round; }).filter(Boolean)).size, "different round")],
+      ["Busiest month", busiest ? MONTH_NAMES[busiest.getMonth()] + " " + busiest.getFullYear() : "-", busiest ? plural(mc[bk], "shoot") : ""],
+      ["Weekly streak", plural(streak, "week"), streak ? "in a row, up to now" : "none this week or last"],
+      ["Longest break", gap ? plural(gap, "day") : "-", gapFrom ? fmtDate(gapFrom) + " to " + fmtDate(gapTo) : ""]
+    ];
+    return '<div class="stat-strip">' + cells.map(function (c) {
+      return '<div><div class="ss-label">' + c[0] + '</div><div class="ss-value">' + c[1] + '</div><div class="ss-sub">' + escapeHtml(c[2]) + "</div></div>";
+    }).join("") + "</div>";
+  }
+  function calendarCard() {
+    const r = heatRange();
+    const inRange = state.entries.filter(function (e) { return e.date >= r.from && e.date <= new Date(r.to.getTime() + DAY_MS - 1); });
+    return heatmapCard().replace(/<\/div>$/, activityStrip(inRange) + "</div>");
+  }
+
+  // --- Overview: monthly activity chart card ---
+  function activityChartCard(filtered) {
+    if (!filtered.some(function (e) { return DISCIPLINE_ORDER.indexOf(e.bucket) !== -1; })) return "";
+    return '<div class="card"><div class="card-eyebrow">' + ICON.calendar + 'Volume</div><h2>Shoots per month</h2><p class="card-note">Stacked by bow type. Hover a month for the split.</p>' +
+      '<div class="chart-box tall"><canvas id="chart-activity" role="img" aria-label="Shoots per month by bow type"></canvas></div></div>';
+  }
+
+  // --- Overview: trophy cabinet ---
+  function trophyCard(filtered) {
+    const notable = filtered.filter(isNotable).slice().reverse();
+    const podiums = notable.filter(function (e) { return e.placing && e.placing <= 3; });
+    const wins = podiums.filter(function (e) { return e.placing === 1; }).length;
+    let html = '<div class="card"><div class="card-eyebrow">' + ICON.star + "Trophy cabinet</div><h2>" + plural(podiums.length, "podium finish", "podium finishes") +
+      (wins ? ' <span class="muted" style="font-weight:500">· ' + plural(wins, "win") + "</span>" : "") + "</h2>" +
+      '<p class="card-note">Placings and record-status shoots in this view, most recent first.</p>';
+    if (!notable.length) return "";
+    html += '<div class="table-scroll" style="max-height:360px"><table><thead><tr><th>Date</th><th>Round</th><th class="num">Score</th><th>Result</th></tr></thead><tbody>';
+    notable.forEach(function (e) {
+      html += '<tr><td class="nowrap">' + fmtDate(e.date) + "</td><td>" + (DISCIPLINE_COLOR[e.bucket] ? '<i class="dot" style="background:var(' + DISCIPLINE_COLOR[e.bucket] + ')"></i> ' : "") + escapeHtml(e.round || "Club shoot") +
+        '</td><td class="num">' + (e.score !== null ? e.score : "-") + "</td><td>" + resultBadges(e) + '<span class="muted small">' + escapeHtml(e.comment) + "</span></td></tr>";
+    });
+    return html + "</tbody></table></div></div>";
+  }
+
+  // --- Bow panel: hero and facts ---
+  function bowHeroCard(name, allEntries) {
+    const s = bowStandings().filter(function (x) { return x.bow === name; })[0];
+    const colorVar = DISCIPLINE_COLOR[name];
+    const eyebrow = '<div class="card-eyebrow"><i class="dot" style="background:var(' + colorVar + ')"></i>' + escapeHtml(name) + " · running handicap</div>";
+    if (!s) return '<div class="card hero">' + eyebrow + '<p class="muted">No running handicap on the sheet for this bow yet.</p></div>';
+    const lowest = minBy(s.series, function (e) { return e.hcRunning; });
+    let caption = "From your last " + name.toLowerCase() + " score on " + fmtDate(s.last.date) + ". ";
+    if (s.lapsed) caption += "<strong>Lapsed</strong>: Archery GB handicaps lapse after 12 months without a score. ";
+    caption += "Lowest ever <strong>" + lowest.hcRunning + "</strong> (" + fmtDate(lowest.date) + ").";
+    const pin = function (lvl, loc) {
+      return [{ lvl: lvl, colorVar: colorVar, tip: name + " · " + (loc === "indoor" ? "indoor" : "outdoor"), sub: "Handicap " + s.hc + " · level " + (lvl !== null ? lvl.toFixed(1) : "-") + " (" + levelName(lvl, loc) + ")", label: loc + " level " + (lvl !== null ? lvl.toFixed(1) : "none") }];
+    };
+    const spark = sparkSvg(s.series.filter(function (e) { return e.date > new Date(state.now.getTime() - 2 * YEAR_MS); }).map(function (e) { return e.hcRunning; }), colorVar, { invert: true, height: 44 });
+    return '<div class="card hero"><div class="hero-top"><div>' + eyebrow +
+      '<div class="hero-figure">' + s.hc + '<span class="unit">handicap</span>' + deltaHtml(s.yearChange, true, "in 12 mo") + "</div>" +
+      '<p class="hero-caption">' + caption + "</p></div>" +
+      (spark ? '<div class="hero-spark"><div class="ss-label">Last 2 years</div>' + spark + "</div>" : "") + "</div>" +
+      '<div class="hero-ladders"><div><div class="ladder-head"><span>Outdoor standard</span><b>' + escapeHtml(levelName(s.lvlO, "outdoor")) + "</b></div>" + ladderHtml("outdoor", pin(s.lvlO, "outdoor"), s.lvlO, colorVar) + "</div>" +
+      '<div><div class="ladder-head"><span>Indoor standard</span><b>' + escapeHtml(levelName(s.lvlI, "indoor")) + "</b></div>" + ladderHtml("indoor", pin(s.lvlI, "indoor"), s.lvlI, colorVar) + "</div></div>" +
+      '<p class="card-note" style="margin:14px 0 0">Where the handicap sits on the Archery GB classification ladder for ' + escapeHtml(name.toLowerCase()) + ". This is the standard the handicap represents, not a claimed classification.</p></div>";
+  }
+  function bowFactsCard(name, allEntries, entries) {
+    const indoorN = entries.filter(function (e) { return e.loc === "indoor"; }).length;
+    const cls = function (loc) {
+      const year = classSeasonFor(state.season, loc, state.now);
+      const cur = bestClass(allEntries, loc, year);
+      if (cur) return [(loc === "indoor" ? "Indoor" : "Outdoor") + " classification", escapeHtml(cur.name.replace(/^Indoor /, "")), seasonName(loc, year) + " · " + plural(cur.count, "qualifying score")];
+      const prev = latestClass(allEntries, loc, year - 1);
+      return [(loc === "indoor" ? "Indoor" : "Outdoor") + " classification", '<span class="muted">None yet</span>', prev ? "Last: " + escapeHtml(prev.name.replace(/^Indoor /, "")) + " (" + (loc === "indoor" ? indoorLabel(prev.year) : prev.year) + ")" : "in " + seasonName(loc, year)];
+    };
+    const best = function (loc) {
+      const b = minBy(entries.filter(function (e) { return e.loc === loc && e.hcRound !== null && !e.isLadder; }), function (e) { return e.hcRound; });
+      return ["Best " + loc + " round", b ? "Hcp " + b.hcRound : "-", b ? escapeHtml(b.round) + " " + b.score + " · " + fmtDate(b.date) : "none in this view"];
+    };
+    return '<div class="card"><h2>At a glance</h2><p class="card-note" style="margin-bottom:6px">' + (state.season === "all" ? "All time" : escapeHtml(seasonLabel(state.season))) + ".</p>" +
+      factList([
+        ["Shoots logged", entries.length, indoorN + " indoor · " + (entries.length - indoorN) + " outdoor"],
+        cls("outdoor"), cls("indoor"), best("outdoor"), best("indoor")
+      ]) + "</div>";
+  }
+
   function render() {
     destroyCharts();
+    if (typeof Chart !== "undefined") {
+      Chart.defaults.font.family = '"Inter", system-ui, -apple-system, "Segoe UI", sans-serif';
+      Chart.defaults.color = cssVar("--text-muted");
+    }
     if (state.entries.length && !state.club && !state.clubLoading) loadClubData();
     renderSeasonSelect();
     const tabs = tabDefs();
     if (!tabs.some(function (t) { return t.id === state.tab; })) state.tab = "overview";
+    const standings = bowStandings();
 
     const tabsEl = document.getElementById("tabs");
-    tabsEl.innerHTML = tabs.map(function (t) {
+    const btn = function (t) {
       const sel = t.id === state.tab;
-      const dot = t.disc ? '<span class="tab-dot" style="background:var(' + DISCIPLINE_COLOR[t.disc] + ')" aria-hidden="true"></span>' : "";
-      return '<button type="button" role="tab" id="tab-' + t.id + '" aria-controls="panel-' + t.id + '" aria-selected="' + sel + '" tabindex="' + (sel ? 0 : -1) + '" data-tab="' + t.id + '"' +
-        (t.disc ? ' style="--dot:var(' + DISCIPLINE_COLOR[t.disc] + ')"' : "") + ">" + dot + escapeHtml(t.label) + "</button>";
-    }).join("");
+      const s = t.disc ? standings.filter(function (x) { return x.bow === t.disc; })[0] : null;
+      const ico = t.disc ? '<span class="tab-dot" style="background:var(' + DISCIPLINE_COLOR[t.disc] + ')"></span>' : ICON[t.id] || "";
+      return '<button type="button" role="tab" id="tab-' + t.id + '" aria-controls="panel-' + t.id + '" aria-selected="' + sel + '" tabindex="' + (sel ? 0 : -1) + '" data-tab="' + t.id + '">' +
+        '<span class="nav-ico" aria-hidden="true">' + ico + "</span>" + escapeHtml(t.label) +
+        (s ? '<span class="nav-meta" title="Running handicap">' + s.hc + "</span>" : "") + "</button>";
+    };
+    tabsEl.innerHTML = btn(tabs[0]) +
+      (state.disciplines.length ? '<div class="nav-group" role="presentation">Bow types</div>' : "") +
+      tabs.filter(function (t) { return t.disc; }).map(btn).join("") +
+      '<div class="nav-group" role="presentation">Equipment</div>' + btn(tabs[tabs.length - 1]);
     tabsEl.hidden = false;
 
     // Only the visible panel is built, which keeps charts sized correctly.
     const current = tabs.filter(function (t) { return t.id === state.tab; })[0];
+    const period = state.season === "all" ? "All time" : seasonLabel(state.season);
+    document.getElementById("viewTitle").textContent = current.id === "overview" ? "Overview" : current.id === "kit" ? "Kit and sight marks" : current.label;
+    document.getElementById("crumbs").textContent = "Duston Bowmen · " + (current.disc ? "Bow types · " : "") + period;
     let body;
     if (current.id === "overview") body = buildOverviewPanel();
     else if (current.id === "kit") body = buildKitPanel();
     else body = buildDisciplinePanel(current.disc, state.byBucket[current.disc]);
     document.getElementById("panels").innerHTML =
       '<section class="panel" role="tabpanel" id="panel-' + current.id + '" aria-labelledby="tab-' + current.id + '">' + body + "</section>";
+    // Show the most recent weeks of the calendar first on narrow screens.
+    document.querySelectorAll(".heat-wrap").forEach(function (w) { w.scrollLeft = w.scrollWidth; });
 
     try {
       if (current.id === "overview") drawOverviewCharts();
@@ -2204,7 +2987,7 @@
     if (b) navigate(b.dataset.tab, state.season, true);
   });
   document.getElementById("tabs").addEventListener("keydown", function (ev) {
-    const keys = { ArrowRight: 1, ArrowLeft: -1, Home: "first", End: "last" };
+    const keys = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 1, ArrowUp: -1, Home: "first", End: "last" };
     if (!(ev.key in keys)) return;
     const buttons = Array.from(document.querySelectorAll("#tabs button[role=tab]"));
     let i = buttons.findIndex(function (b) { return b.dataset.tab === state.tab; });
@@ -2231,7 +3014,19 @@
       return;
     }
     const nav = ev.target.closest("a[data-nav]");
-    if (nav) { ev.preventDefault(); navigate(nav.dataset.nav, state.season, true); }
+    if (nav) { ev.preventDefault(); navigate(nav.dataset.nav, state.season, true); return; }
+    const lg = ev.target.closest("button[data-legend]");
+    if (lg) {
+      const bow = lg.dataset.legend;
+      state.hiddenBows = state.hiddenBows || {};
+      state.hiddenBows[bow] = !state.hiddenBows[bow];
+      lg.setAttribute("aria-pressed", String(!state.hiddenBows[bow]));
+      const chart = chartInstances.filter(function (c) { return c.canvas && c.canvas.id === "chart-overview"; })[0];
+      if (chart) {
+        chart.data.datasets.forEach(function (ds, i) { if (ds.label === bow) chart.setDatasetVisibility(i, !state.hiddenBows[bow]); });
+        chart.update();
+      }
+    }
   });
 
   document.getElementById("panels").addEventListener("change", function (ev) {
@@ -2304,8 +3099,9 @@
         return;
       }
       const done = function (ok) {
-        btn.textContent = ok ? "Link copied" : "Copy failed";
-        setTimeout(function () { btn.textContent = "Share"; }, 2000);
+        const lab = document.getElementById("shareLabel") || btn;
+        lab.textContent = ok ? "Link copied" : "Copy failed";
+        setTimeout(function () { lab.textContent = "Share"; }, 2000);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { done(true); }, function () { done(false); });
       else done(false);
@@ -2332,7 +3128,8 @@
   function updateThemeButton() {
     const btn = document.getElementById("themeToggle");
     const next = effectiveTheme() === "dark" ? "light" : "dark";
-    btn.textContent = next === "dark" ? "Dark theme" : "Light theme";
+    btn.innerHTML = next === "dark" ? ICON.moon : ICON.sun;
+    btn.title = "Switch to " + next + " theme";
     btn.setAttribute("aria-label", "Switch to " + next + " theme");
   }
   (function themeInit() {
@@ -2410,6 +3207,10 @@
     const el = document.getElementById("statusLine");
     el.textContent = text;
     el.classList.toggle("warn", !!warn);
+    const box = document.getElementById("liveBox");
+    if (box) box.classList.toggle("warn", !!warn);
+    const mob = document.getElementById("mobileStatus");
+    if (mob) mob.textContent = text;
   }
 
   function summaryStatus(prefix) {
