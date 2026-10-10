@@ -404,6 +404,7 @@
   .chart-box.short { height: clamp(200px, 18vw, 240px); }
   .chart-box.tall { height: clamp(260px, 26vw, 360px); }
   .chart-box canvas { display: block; }
+  .chart-box:not(:has(canvas)) { height: auto; }
 
   /* HTML chart tooltip: glides between points */
   .chart-tip { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; min-width: 140px; max-width: 270px;
@@ -675,6 +676,8 @@
     .head-controls { width: 100%; }
     .head-controls .select-wrap { flex: 1; }
     .head-controls select { width: 100%; }
+    .btn .btn-label { display: none; }
+    .btn:has(.btn-label) { width: 34px; padding: 0; justify-content: center; }
     .timeline li { grid-template-columns: 70px 14px minmax(0,1fr); gap: 8px; }
     .timeline .t-date { font-size: 0.7rem; }
     .l252-row, .l252-dist { grid-template-columns: 70px minmax(0,1fr); gap: 8px; }
@@ -2824,7 +2827,7 @@
   function deltaHtml(diff, betterWhenLower, suffix) {
     if (diff === null || diff === undefined || !isFinite(diff)) return "";
     const rounded = Math.round(diff * 10) / 10;
-    if (rounded === 0) return '<span class="delta flat">no change' + (suffix ? (suffix === "%" ? "" : " ") + suffix : "") + "</span>";
+    if (rounded === 0) return '<span class="delta flat">no change' + (suffix && suffix !== "%" ? " " + suffix : "") + "</span>";
     const good = betterWhenLower ? rounded < 0 : rounded > 0;
     const arrow = rounded > 0 ? "↑" : "↓";
     return '<span class="delta ' + (good ? "up" : "down") + '">' + arrow + " " + Math.abs(rounded) + (suffix ? (suffix === "%" ? "" : " ") + suffix : "") + "</span>";
@@ -2920,6 +2923,8 @@
       return { list: state.entries.filter(function (e) { return inSeason(e, state.season); }), label: "in " + seasonLabel(state.season), prev: null };
     }
     const from = new Date(state.now.getTime() - YEAR_MS), prevFrom = new Date(state.now.getTime() - 2 * YEAR_MS);
+    // Nothing shot for a year: show the all-time totals rather than a row of zeros.
+    if (!state.entries.some(function (e) { return e.date > from; })) return { list: state.entries.slice(), prev: null, label: "all time" };
     return {
       list: state.entries.filter(function (e) { return e.date > from; }),
       prev: state.entries.filter(function (e) { return e.date > prevFrom && e.date <= from; }),
@@ -2942,16 +2947,16 @@
     let html = '<div class="tile-row">';
     html += kpi("Shoots logged", shoots.toLocaleString("en-GB"), p.label, {
       delta: prevShoots !== null ? deltaHtml(shoots - prevShoots, false) : "",
-      spark: state.season === "all" ? sparkSvg(byMonth(sparkSrc, function () { return 1; }), "--text-muted", { height: 30 }) : "",
+      spark: p.prev ? sparkSvg(byMonth(sparkSrc, function () { return 1; }), "--text-muted", { height: 30 }) : "",
       tip: prevShoots !== null ? "Previous 12 months: " + prevShoots : ""
     });
     html += kpi("Arrows shot", "~" + arrows.toLocaleString("en-GB"), "on recognised rounds, " + p.label, {
       delta: prevArrows ? deltaHtml(Math.round((arrows - prevArrows) / prevArrows * 100), false, "%") : "",
-      spark: state.season === "all" ? sparkSvg(byMonth(sparkSrc, function (e) { return e.arrows || 0; }), "--text-muted", { height: 30 }) : ""
+      spark: p.prev ? sparkSvg(byMonth(sparkSrc, function (e) { return e.arrows || 0; }), "--text-muted", { height: 30 }) : ""
     });
     html += kpi("Personal bests", pbs, "scores beating a previous best, " + p.label, {
       delta: prevPbs !== null ? deltaHtml(pbs - prevPbs, false) : "",
-      spark: state.season === "all" ? sparkSvg(byMonth(sparkSrc, function (e) { return e.events.some(function (x) { return x.type === "pb"; }) ? 1 : 0; }), "--text-muted", { height: 30 }) : ""
+      spark: p.prev ? sparkSvg(byMonth(sparkSrc, function (e) { return e.events.some(function (x) { return x.type === "pb"; }) ? 1 : 0; }), "--text-muted", { height: 30 }) : ""
     });
     if (best) {
       html += kpi('<i class="dot" style="background:var(' + DISCIPLINE_COLOR[best.bow] + ')"></i>Lowest handicap', best.hc, best.bow + (best.lapsed ? " (lapsed)" : "") + " · best ever " +
