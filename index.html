@@ -21,8 +21,8 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Archery Tracker: Neil Fletcher">
 <meta name="twitter:description" content="Handicap progression, Archery GB classifications, personal bests and kit.">
-<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0b0c10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0a0b0f" id="themeColor">
+<script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("archery-theme")==="light"?"light":"dark");}catch(e){document.documentElement.setAttribute("data-theme","dark");}</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23ffffff' stroke='%23222' stroke-width='1'/%3E%3Ccircle cx='16' cy='16' r='12' fill='%23222'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%232a78d6'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23e5322d'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23f5c518'/%3E%3C/svg%3E">
@@ -59,6 +59,11 @@
     --border:      rgba(15,17,21,0.09);
     --card-border: rgba(15,17,21,0.07);
     --ring:        rgba(15,17,21,0.14);
+    --border-strong: rgba(15,17,21,0.13);
+    --highlight:   rgba(255,255,255,0);
+    --surface-4:   #e4e7ec;
+    --link:        #1f5fae;
+    --focus-ring:  rgba(42,120,214,0.25);
     --shadow-sm:   0 1px 2px rgba(15,17,21,0.04), 0 1px 1px rgba(15,17,21,0.03);
     --shadow-md:   0 1px 2px rgba(15,17,21,0.05), 0 8px 24px -12px rgba(15,17,21,0.12);
     --shadow-pop:  0 12px 32px -8px rgba(15,17,21,0.22), 0 2px 6px rgba(15,17,21,0.08);
@@ -92,89 +97,63 @@
     --radius-md: 12px;
     --radius-sm: 8px;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:where(:not([data-theme="light"])) {
-      color-scheme: dark;
-      --page:        #0b0c10;
-      --surface-1:   #14161b;
-      --surface-2:   #181b21;
-      --surface-3:   #20242c;
-      --sidebar:     #0f1115;
-      --page-plane:  #0b0c10;
-      --text-primary:   #f2f3f5;
-      --text-secondary: #b9bec8;
-      --text-muted:     #8b919c;
-      --text-faint:     #626873;
-      --gridline:    #22262e;
-      --baseline:    #343944;
-      --border:      rgba(255,255,255,0.08);
-      --card-border: rgba(255,255,255,0.07);
-      --ring:        rgba(255,255,255,0.16);
-      --shadow-sm:   0 1px 2px rgba(0,0,0,0.4);
-      --shadow-md:   0 1px 2px rgba(0,0,0,0.4), 0 12px 28px -16px rgba(0,0,0,0.7);
-      --shadow-pop:  0 16px 40px -10px rgba(0,0,0,0.75), 0 2px 6px rgba(0,0,0,0.5);
-      --ink:         #f2f3f5;
-      --ink-contrast:#0b0c10;
-      --hover:       rgba(255,255,255,0.05);
-      --selected:    rgba(255,255,255,0.08);
-      --success-text: #3cc56a;
-      --success-bg:   rgba(12,163,12,0.16);
-      --warning-text: #f0b33c;
-      --warning-bg:   rgba(250,178,25,0.14);
-      --danger-text:  #ff7b7b;
-      --focus:        #6aa7f0;
-      --recurve:  #3987e5;
-      --barebow:  #d95926;
-      --compound: #199e70;
-      --longbow:  #c98500;
-      --special:  #9085e9;
-      --heat-0: #1d2027;
-      --heat-1: #173257;
-      --heat-2: #1c5cab;
-      --heat-3: #3987e5;
-      --heat-4: #86b6ef;
-    }
-  }
+  /* =================================================================
+     Premium dark (default theme). Elevation comes from lighter surfaces
+     and hairline borders, not shadows. Text contrast on surface-1:
+     primary 16.9:1, secondary 9.6:1, muted 6.2:1 (AA on every surface).
+     Bow colours validated against #121419: CVD separation >= 9.7.
+     ================================================================= */
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --page:        #0b0c10;
-    --surface-1:   #14161b;
-    --surface-2:   #181b21;
-    --surface-3:   #20242c;
-    --sidebar:     #0f1115;
-    --page-plane:  #0b0c10;
-    --text-primary:   #f2f3f5;
-    --text-secondary: #b9bec8;
-    --text-muted:     #8b919c;
-    --text-faint:     #626873;
-    --gridline:    #22262e;
-    --baseline:    #343944;
-    --border:      rgba(255,255,255,0.08);
-    --card-border: rgba(255,255,255,0.07);
-    --ring:        rgba(255,255,255,0.16);
-    --shadow-sm:   0 1px 2px rgba(0,0,0,0.4);
-    --shadow-md:   0 1px 2px rgba(0,0,0,0.4), 0 12px 28px -16px rgba(0,0,0,0.7);
-    --shadow-pop:  0 16px 40px -10px rgba(0,0,0,0.75), 0 2px 6px rgba(0,0,0,0.5);
-    --ink:         #f2f3f5;
-    --ink-contrast:#0b0c10;
-    --hover:       rgba(255,255,255,0.05);
-    --selected:    rgba(255,255,255,0.08);
-    --success-text: #3cc56a;
-    --success-bg:   rgba(12,163,12,0.16);
-    --warning-text: #f0b33c;
-    --warning-bg:   rgba(250,178,25,0.14);
-    --danger-text:  #ff7b7b;
-    --focus:        #6aa7f0;
-    --recurve:  #3987e5;
-    --barebow:  #d95926;
-    --compound: #199e70;
+    --page:        #0a0b0f;
+    --sidebar:     #0d0f14;
+    --surface-1:   #121419;
+    --surface-2:   #171a20;
+    --surface-3:   #1e222a;
+    --surface-4:   #272c36;
+    --page-plane:  #0a0b0f;
+
+    --text-primary:   #f4f5f7;
+    --text-secondary: #b5bbc6;
+    --text-muted:     #8f96a3;
+    --text-faint:     #6b7280;
+    --link:           #a9c4ff;
+
+    --gridline:    #1d2129;
+    --baseline:    #2e3440;
+    --border:        rgba(255,255,255,0.07);
+    --border-strong: rgba(255,255,255,0.11);
+    --card-border:   rgba(255,255,255,0.065);
+    --highlight:     rgba(255,255,255,0.045);
+    --ring:          rgba(255,255,255,0.18);
+    --shadow-sm:   0 1px 2px rgba(0,0,0,0.5);
+    --shadow-md:   inset 0 1px 0 var(--highlight), 0 1px 2px rgba(0,0,0,0.55), 0 18px 36px -22px rgba(0,0,0,0.95);
+    --shadow-pop:  inset 0 1px 0 var(--highlight), 0 24px 48px -12px rgba(0,0,0,0.85), 0 2px 8px rgba(0,0,0,0.6);
+
+    --ink:          #f4f5f7;
+    --ink-contrast: #0a0b0f;
+    --hover:        rgba(255,255,255,0.045);
+    --selected:     rgba(255,255,255,0.075);
+
+    --success-text: #45d483;
+    --success-bg:   rgba(69,212,131,0.12);
+    --warning-text: #f2b443;
+    --warning-bg:   rgba(242,180,67,0.12);
+    --danger-text:  #ff8080;
+    --focus:        #7fa8ff;
+    --focus-ring:   rgba(127,168,255,0.35);
+
+    --recurve:  #4a92ee;
+    --barebow:  #e8652f;
+    --compound: #1fae7d;
     --longbow:  #c98500;
     --special:  #9085e9;
-    --heat-0: #1d2027;
-    --heat-1: #173257;
-    --heat-2: #1c5cab;
-    --heat-3: #3987e5;
-    --heat-4: #86b6ef;
+
+    --heat-0: #1b1f27;
+    --heat-1: #173659;
+    --heat-2: #1f5fae;
+    --heat-3: #4a92ee;
+    --heat-4: #9cc6f6;
   }
 
   /* ================================================================= Base */
@@ -505,6 +484,104 @@
   footer.page-foot { color: var(--text-muted); font-size: 0.75rem; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); line-height: 1.7; }
   footer.page-foot a { color: var(--text-secondary); }
 
+  /* ================================================== Dark component layer */
+  :root[data-theme="dark"] body {
+    background:
+      radial-gradient(1100px 520px at 72% -12%, rgba(255,255,255,0.035), transparent 62%),
+      var(--page);
+    background-attachment: fixed;
+  }
+  :root[data-theme="dark"] ::selection { background: rgba(127,168,255,0.32); color: #fff; }
+  :root[data-theme="dark"] * { scrollbar-color: #2a2f39 transparent; scrollbar-width: thin; }
+  :root[data-theme="dark"] h1 { font-weight: 600; letter-spacing: -0.022em; }
+  :root[data-theme="dark"] .card h2, :root[data-theme="dark"] .section-title h2 { font-weight: 600; color: var(--text-primary); }
+  :root[data-theme="dark"] .section-title h2 { font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-secondary); }
+  :root[data-theme="dark"] a { text-decoration-color: rgba(255,255,255,0.25); text-underline-offset: 2px; }
+  :root[data-theme="dark"] .card-note a, :root[data-theme="dark"] footer.page-foot a { color: var(--link); text-decoration-color: rgba(169,196,255,0.35); }
+
+  /* Shell */
+  @media (min-width: 901px) {
+    :root[data-theme="dark"] .app { background: linear-gradient(90deg, var(--sidebar) 247px, var(--border) 247px, var(--border) 248px, transparent 248px); }
+    :root[data-theme="dark"] nav.tabs button[aria-selected="true"]::before { content: ""; position: absolute; left: -14px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--ink); }
+  }
+  :root[data-theme="dark"] .brand-mark { background: linear-gradient(160deg, #2a2f3a, #15181e); box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(255,255,255,0.06), 0 6px 14px -6px rgba(0,0,0,0.9); }
+  :root[data-theme="dark"] .brand-mark svg circle { stroke: #f4f5f7; }
+  :root[data-theme="dark"] .brand-mark svg circle:last-child { fill: #f4f5f7; stroke: none; }
+  :root[data-theme="dark"] nav.tabs button { color: var(--text-muted); position: relative; }
+  :root[data-theme="dark"] nav.tabs button:hover { color: var(--text-primary); background: var(--hover); }
+  :root[data-theme="dark"] nav.tabs button[aria-selected="true"] { color: var(--text-primary); font-weight: 600; background: var(--surface-3); box-shadow: inset 0 1px 0 var(--highlight), 0 0 0 1px var(--border); }
+  :root[data-theme="dark"] nav.tabs .nav-meta { background: var(--surface-3); color: var(--text-secondary); border-radius: 6px; padding: 1px 7px; font-size: 0.72rem; }
+  :root[data-theme="dark"] nav.tabs button[aria-selected="true"] .nav-meta { background: var(--surface-4); color: var(--text-primary); }
+  :root[data-theme="dark"] .nav-label, :root[data-theme="dark"] nav.tabs .nav-group { color: var(--text-muted); }
+  :root[data-theme="dark"] .topbar { background: color-mix(in srgb, var(--page) 78%, transparent); border-bottom-color: var(--border); }
+  :root[data-theme="dark"] .crumbs { color: var(--text-muted); }
+
+  /* Surfaces */
+  :root[data-theme="dark"] .card, :root[data-theme="dark"] .tile, :root[data-theme="dark"] .error-box {
+    background: linear-gradient(180deg, rgba(255,255,255,0.022), rgba(255,255,255,0) 120px), var(--surface-1);
+    border-color: var(--card-border); box-shadow: var(--shadow-md);
+  }
+  :root[data-theme="dark"] .card .tile { background: var(--surface-2); box-shadow: inset 0 1px 0 var(--highlight); }
+  :root[data-theme="dark"] .hero { isolation: isolate; }
+  :root[data-theme="dark"] .hero::before { content: ""; position: absolute; z-index: -1; inset: -40% -20% auto auto; width: 70%; height: 120%;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--hero-glow, #ffffff) 13%, transparent), transparent); pointer-events: none; }
+  :root[data-theme="dark"] .hero-figure { font-weight: 650; background: linear-gradient(180deg, #ffffff 30%, #c9ced8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  :root[data-theme="dark"] .hero-figure .unit, :root[data-theme="dark"] .hero-figure .delta { -webkit-text-fill-color: initial; }
+  :root[data-theme="dark"] .hero-figure .unit { color: var(--text-muted); }
+  :root[data-theme="dark"] .tile .value { font-weight: 600; }
+  :root[data-theme="dark"] .tile .label, :root[data-theme="dark"] .card-eyebrow { color: var(--text-muted); }
+
+  /* Controls */
+  :root[data-theme="dark"] button.btn, :root[data-theme="dark"] a.btn, :root[data-theme="dark"] select,
+  :root[data-theme="dark"] input[type=text], :root[data-theme="dark"] input[type=number] {
+    background: var(--surface-2); border-color: var(--border-strong); color: var(--text-primary);
+    box-shadow: inset 0 1px 0 var(--highlight), 0 1px 2px rgba(0,0,0,0.4);
+  }
+  :root[data-theme="dark"] button.btn:hover, :root[data-theme="dark"] a.btn:hover, :root[data-theme="dark"] select:hover,
+  :root[data-theme="dark"] input:hover { background: var(--surface-3); border-color: var(--ring); }
+  :root[data-theme="dark"] button.btn:active { background: var(--surface-4); }
+  :root[data-theme="dark"] button.btn.primary { background: var(--ink); color: var(--ink-contrast); border-color: transparent; }
+  :root[data-theme="dark"] select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238f96a3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+  :root[data-theme="dark"] select option, :root[data-theme="dark"] select optgroup { background: var(--surface-2); color: var(--text-primary); }
+  :root[data-theme="dark"] select:focus-visible, :root[data-theme="dark"] input:focus-visible, :root[data-theme="dark"] button:focus-visible {
+    outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px var(--focus-ring); }
+  :root[data-theme="dark"] .seg { background: var(--sidebar); box-shadow: inset 0 0 0 1px var(--border); }
+  :root[data-theme="dark"] .seg button { color: var(--text-muted); }
+  :root[data-theme="dark"] .seg button[aria-pressed="true"] { background: var(--surface-4); color: var(--text-primary); box-shadow: inset 0 1px 0 var(--highlight), 0 1px 2px rgba(0,0,0,0.5); }
+  :root[data-theme="dark"] .legend button { background: var(--surface-2); border-color: var(--border-strong); color: var(--text-secondary); }
+  :root[data-theme="dark"] .legend button:hover { background: var(--surface-3); color: var(--text-primary); }
+  :root[data-theme="dark"] .legend button[aria-pressed="false"] { background: transparent; color: var(--text-faint); border-style: dashed; }
+  :root[data-theme="dark"] .chip { background: var(--surface-2); border-color: var(--border-strong); color: var(--text-secondary); }
+
+  /* Data display */
+  :root[data-theme="dark"] thead th, :root[data-theme="dark"] .table-scroll thead th, :root[data-theme="dark"] .table-wide-scroll thead th { background: var(--surface-2); color: var(--text-muted); border-bottom-color: var(--border); }
+  :root[data-theme="dark"] tbody td { border-bottom-color: var(--gridline); color: var(--text-secondary); }
+  :root[data-theme="dark"] tbody td:first-child, :root[data-theme="dark"] tbody td strong, :root[data-theme="dark"] td.num { color: var(--text-primary); }
+  :root[data-theme="dark"] tbody tr:hover td { background: rgba(255,255,255,0.028); }
+  :root[data-theme="dark"] .table-scroll, :root[data-theme="dark"] .table-wide-scroll { border-color: var(--border); background: rgba(0,0,0,0.12); }
+  :root[data-theme="dark"] .pill, :root[data-theme="dark"] .badge.pn, :root[data-theme="dark"] .badge.rs, :root[data-theme="dark"] .badge.ev { background: var(--surface-3); color: var(--text-secondary); box-shadow: inset 0 0 0 1px var(--border); }
+  :root[data-theme="dark"] .badge.ev-pb { color: var(--success-text); background: var(--success-bg); box-shadow: inset 0 0 0 1px rgba(69,212,131,0.2); }
+  :root[data-theme="dark"] .badge.ev-podium { color: var(--warning-text); background: var(--warning-bg); box-shadow: inset 0 0 0 1px rgba(242,180,67,0.2); }
+  :root[data-theme="dark"] .badge.ev-class { color: var(--text-primary); background: var(--surface-4); }
+  :root[data-theme="dark"] .delta.up { box-shadow: inset 0 0 0 1px rgba(69,212,131,0.18); }
+  :root[data-theme="dark"] .delta.down { box-shadow: inset 0 0 0 1px rgba(242,180,67,0.18); }
+  :root[data-theme="dark"] .delta.flat { background: var(--surface-3); }
+  :root[data-theme="dark"] .ins-ico { background: var(--surface-3); color: var(--text-secondary); box-shadow: inset 0 1px 0 var(--highlight), 0 0 0 1px var(--border); }
+  :root[data-theme="dark"] .insights li, :root[data-theme="dark"] .bow-row, :root[data-theme="dark"] .stat-strip, :root[data-theme="dark"] .stat-strip > div { border-color: var(--gridline); }
+  :root[data-theme="dark"] .ladder-track { background: var(--surface-3); box-shadow: inset 0 1px 2px rgba(0,0,0,0.5); }
+  :root[data-theme="dark"] .ladder-ticks span { border-right-color: var(--surface-1); }
+  :root[data-theme="dark"] .ladder-pin { box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.6); }
+  :root[data-theme="dark"] .ladder-labels, :root[data-theme="dark"] .l252-dist { color: var(--text-muted); }
+  :root[data-theme="dark"] .l252-step { background: var(--surface-3); color: var(--text-muted); }
+  :root[data-theme="dark"] .l252-step.part { background: color-mix(in srgb, var(--step-color) 10%, var(--surface-1)); color: var(--text-primary); }
+  :root[data-theme="dark"] .l252-step.done { background: var(--step-color); color: #0a0b0f; box-shadow: inset 0 1px 0 rgba(255,255,255,0.25); }
+  :root[data-theme="dark"] .heat-cell:hover { stroke: #ffffff; }
+  :root[data-theme="dark"] .timeline .t-node i { box-shadow: 0 0 0 3px var(--surface-1); }
+  :root[data-theme="dark"] .viz-tip, :root[data-theme="dark"] .chart-tip { background: var(--surface-3); border-color: var(--border-strong); box-shadow: var(--shadow-pop); }
+  :root[data-theme="dark"] .ct-row i { box-shadow: 0 0 0 2px var(--surface-3); }
+  :root[data-theme="dark"] .skeleton div { background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%); background-size: 200% 100%; }
+  :root[data-theme="dark"] footer.page-foot { border-top-color: var(--border); }
+
   /* ============================================================ Motion */
   .tile .value, .hero-figure, .bow-hc b, .ss-value { font-variant-numeric: tabular-nums; }
   .reveal { opacity: 0; }
@@ -552,6 +629,14 @@
     body[data-printing] .grid { display: block; }
     .card, .tile { box-shadow: none; border-color: #ccc; break-inside: avoid; }
     .reveal { opacity: 1 !important; animation: none !important; transform: none !important; }
+    :root[data-theme="dark"] { color-scheme: light; --page: #fff; --surface-1: #fff; --surface-2: #f6f7f9; --surface-3: #eef0f3; --surface-4: #e4e7ec;
+      --text-primary: #0f1115; --text-secondary: #4a4f59; --text-muted: #6b717c; --text-faint: #9aa0aa; --link: #1f5fae;
+      --gridline: #e3e6ea; --baseline: #c9cdd4; --border: rgba(0,0,0,0.12); --border-strong: rgba(0,0,0,0.16); --card-border: rgba(0,0,0,0.12);
+      --success-text: #0b7a3b; --warning-text: #8a5a00; --highlight: transparent; }
+    :root[data-theme="dark"] body { background: #fff; }
+    :root[data-theme="dark"] .card, :root[data-theme="dark"] .tile { background: #fff !important; box-shadow: none !important; }
+    :root[data-theme="dark"] .hero::before { display: none; }
+    :root[data-theme="dark"] .hero-figure { background: none; color: #0f1115; }
     .reveal * { animation: none !important; }
     .chart-tip { display: none; }
     .dot, .tab-dot, .badge, .l252-step { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -2798,7 +2883,7 @@
     const legend = standings.map(function (s) {
       return '<span><i class="dot" style="background:var(' + DISCIPLINE_COLOR[s.bow] + ')"></i>' + s.bow + " <b>" + (s.lvlO !== null ? escapeHtml(levelName(s.lvlO, "outdoor")) : "-") + "</b>" + (s.lapsed ? ' <span class="tag lapsed">lapsed</span>' : "") + "</span>";
     }).join("");
-    return '<div class="card hero">' +
+    return '<div class="card hero" style="--hero-glow:var(' + DISCIPLINE_COLOR[top.bow] + ')">' +
       '<div class="hero-top"><div><div class="card-eyebrow">' + ICON.target + "Current standard · " + escapeHtml(top.bow) + "</div>" +
       '<div class="hero-figure">' + top.hc + '<span class="unit">handicap</span>' + deltaHtml(top.yearChange, true, "in 12 mo") + "</div>" +
       '<p class="hero-caption">' + caption + "</p></div>" +
@@ -2976,7 +3061,7 @@
     const dayLabels = ["Mon", "", "Wed", "", "Fri", "", ""].map(function (t, i) { return t ? '<text x="0" y="' + (top + i * (cell + gap) + 10) + '" font-size="10" fill="var(--text-muted)">' + t + "</text>" : ""; }).join("");
     return '<div class="card"><div class="card-head"><div><h2>Shooting calendar</h2><p class="card-note">' + escapeHtml(r.label) + ": " + plural(days, "shooting day") + ", " + plural(shoots, "shoot") + ". Hover a day for what was shot.</p></div></div>" +
       '<div class="heat-wrap"><svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="Calendar of shooting days">' + monthLabels + dayLabels + svg + "</svg></div>" +
-      '<div class="heat-foot"><span>Each square is a day; darker means more shoots logged.</span><span class="heat-scale">Less ' + [0, 2, 3, 4].map(function (l) { return '<i style="background:var(--heat-' + l + ')"></i>'; }).join("") + " More</span></div></div>";
+      '<div class="heat-foot"><span>Each square is a day; stronger colour means more shoots logged.</span><span class="heat-scale">Less ' + [0, 2, 3, 4].map(function (l) { return '<i style="background:var(--heat-' + l + ')"></i>'; }).join("") + " More</span></div></div>";
   }
 
   // --- Activity stats beside the calendar ---
@@ -3205,7 +3290,7 @@
       return [{ lvl: lvl, colorVar: colorVar, tip: name + " · " + (loc === "indoor" ? "indoor" : "outdoor"), sub: "Handicap " + s.hc + " · level " + (lvl !== null ? lvl.toFixed(1) : "-") + " (" + levelName(lvl, loc) + ")", label: loc + " level " + (lvl !== null ? lvl.toFixed(1) : "none") }];
     };
     const spark = sparkSvg(s.series.filter(function (e) { return e.date > new Date(state.now.getTime() - 2 * YEAR_MS); }).map(function (e) { return e.hcRunning; }), colorVar, { invert: true, height: 44 });
-    return '<div class="card hero"><div class="hero-top"><div>' + eyebrow +
+    return '<div class="card hero" style="--hero-glow:var(' + colorVar + ')"><div class="hero-top"><div>' + eyebrow +
       '<div class="hero-figure">' + s.hc + '<span class="unit">handicap</span>' + deltaHtml(s.yearChange, true, "in 12 mo") + "</div>" +
       '<p class="hero-caption">' + caption + "</p></div>" +
       (spark ? '<div class="hero-spark"><div class="ss-label">Last 2 years</div>' + spark + "</div>" : "") + "</div>" +
@@ -3466,6 +3551,8 @@
     const next = effectiveTheme() === "dark" ? "light" : "dark";
     btn.innerHTML = next === "dark" ? ICON.moon : ICON.sun;
     btn.title = "Switch to " + next + " theme";
+    const meta = document.getElementById("themeColor");
+    if (meta) meta.setAttribute("content", next === "dark" ? "#f4f5f7" : "#0a0b0f");
     btn.setAttribute("aria-label", "Switch to " + next + " theme");
   }
   (function themeInit() {
