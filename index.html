@@ -6,6 +6,8 @@
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
+  // Visitors can turn analytics off (link in the footer); this keeps it off on this device.
+  try { if (localStorage.getItem('analyticsOff') === '1') window['ga-disable-G-JF54HQGVLT'] = true; } catch (e) {}
   gtag('js', new Date());
   gtag('config', 'G-JF54HQGVLT', { page_location: location.origin + location.pathname });
 </script>
@@ -3766,6 +3768,31 @@
   loadAndRender();
 })();
 
+</script>
+<p id="nf-analytics" style="margin:24px auto 16px;padding:0 16px;max-width:720px;text-align:center;font:12px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;color:inherit;opacity:.7">
+  This site uses Google Analytics to count visits and see which features get used. No personal details are collected.
+  <a href="#" id="nf-analytics-toggle" style="color:inherit;text-decoration:underline">Turn off</a>
+</p>
+<script>
+(function () {
+  var a = document.getElementById('nf-analytics-toggle');
+  function off() { try { return localStorage.getItem('analyticsOff') === '1'; } catch (e) { return false; } }
+  function label() { a.textContent = off() ? 'Analytics is off on this device. Turn back on' : 'Turn off'; }
+  label();
+  a.addEventListener('click', function (e) {
+    e.preventDefault();
+    var now = !off();
+    try { if (now) localStorage.setItem('analyticsOff', '1'); else localStorage.removeItem('analyticsOff'); } catch (err) {}
+    window['ga-disable-G-JF54HQGVLT'] = now;
+    if (now) document.cookie.split(';').forEach(function (c) {
+      var n = c.split('=')[0].trim();
+      if (/^_ga/.test(n)) [location.hostname, '.' + location.hostname, ''].forEach(function (d) {
+        document.cookie = n + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/' + (d ? '; domain=' + d : '');
+      });
+    });
+    label();
+  });
+})();
 </script>
 </body>
 </html>
