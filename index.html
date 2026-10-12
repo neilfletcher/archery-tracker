@@ -9,6 +9,16 @@
   gtag('js', new Date());
   gtag('config', 'G-JF54HQGVLT', { page_location: location.origin + location.pathname });
 </script>
+<script>
+  // Usage events for the admin dashboard: what was done here, never who did it.
+  window.ssTrack = function (name, detail) {
+    try { if (window.gtag) gtag('event', name, detail ? { detail: String(detail).slice(0, 60) } : {}); } catch (e) {}
+  };
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest('[data-tab]');
+    if (t) window.ssTrack('tab_viewed', t.getAttribute('data-tab'));
+  }, true);
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Neil Fletcher: Archery Tracker</title>
 <meta name="description" content="Live archery progress tracker: handicaps, Archery GB classifications, personal bests and kit, pulled from Neil Fletcher's competition and practice log.">
