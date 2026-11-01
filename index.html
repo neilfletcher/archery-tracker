@@ -2537,14 +2537,21 @@
     { key: "wa18", name: "WA 18m", rounds: ["wa18"] }
   ];
   const QUIVER = [["Portsmouth", "portsmouth"], ["Worcester", "worcester"], ["Vegas", "vegas"], ["WA 18m", "wa18"]];
+  // Bow-type adjustment for the leagues (the record keeper's "bow correction
+  // for leader board" tab): adjusted = max * g(score / max), where g is a
+  // polynomial in the score as a fraction of the round's maximum. The same
+  // curves apply to every league. Recurve is unchanged; flatbow and any other
+  // bow use the flatbow curve. Coefficients are for x^1, x^2, x^3, x^4.
   const LEAGUE_CONV = {
-    frostbite: { Barebow: [5.47842e-5, -0.014822, 1.93319], Longbow: [1.32620e-4, -0.0296572, 2.6495], Compound: [0, 0.00807984, 0.19923], Other: [1.06269e-4, -0.0248998, 2.42729] },
-    indoor: { Barebow: [5.4159e-5, -0.0147293, 1.93017], Longbow: [1.30454e-4, -0.0293236, 2.6378], Compound: [0, 0.00807984, 0.19923], Other: [1.06269e-4, -0.0248998, 2.42729] }
+    Compound: [0.193658, 0.830696, -0.0203395, 0],
+    Barebow: [1.93017, -1.47293, 0.54159, 0],
+    Longbow: [2.66175, -3.05421, 1.50896, -0.113286],
+    Other: [2.442276, -2.579826, 1.218749, -0.0793002]
   };
-  function leagueAdjust(key, bow, score, max) {
+  function leagueAdjust(leagueKey, bow, score, max) {
     if (bow === "Recurve" || !max) return score;
-    const g = LEAGUE_CONV[key === "frostbite" ? "frostbite" : "indoor"], co = g[bow] || g.Other, x = 100 * score / max;
-    return max / 100 * (co[0] * x * x * x + co[1] * x * x + co[2] * x);
+    const co = LEAGUE_CONV[bow] || LEAGUE_CONV.Other, x = score / max;
+    return max * x * (co[0] + x * (co[1] + x * (co[2] + x * co[3])));
   }
   // members: [{ id, entries }] -> per league, sorted rows { id, adj, e }
   function leagueTables(members, year) {
