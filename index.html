@@ -1599,8 +1599,8 @@
           items.forEach(function (it) {
             const ds = chart.data.datasets[it.datasetIndex];
             if (!ds) return;
-            if (chart.config.type === "line" && ds.showLine !== false && !ds.pointRadius) {
-              it.pointStyle = "line"; it.strokeStyle = ds.borderColor; it.lineWidth = 3;
+            if (chart.config.type === "line" && ds.showLine !== false && (!ds.pointRadius || ds.stepped)) {
+              it.pointStyle = "line"; it.strokeStyle = ds.borderColor; it.lineWidth = 3; it.lineDash = ds.borderDash || [];
             } else if (ds.pointStyle) {
               it.pointStyle = ds.pointStyle;
             }
@@ -1655,7 +1655,7 @@
     let head = e.round || "Club shoot";
     if (e.score !== null) head += ": " + e.score;
     lines.push(head);
-    if (hcField === "hcRunning" && e.hcRunning !== null) lines.push("Running handicap " + e.hcRunning);
+    if (hcField === "hcRunning" && e.hcRunning !== null) lines.push((e.loc === "indoor" ? "Indoor" : "Outdoor") + " handicap " + e.hcRunning);
     if (e.hcRound !== null) lines.push("Round handicap " + e.hcRound);
     if (e.classification) lines.push(e.classification);
     return lines;
@@ -1777,14 +1777,11 @@
     }
 
     const goal = goalFor(name);
-    const running = (function () {
-      const withRun = allEntries.filter(function (e) { return e.hcRunning !== null; });
-      return withRun.length ? withRun[withRun.length - 1].hcRunning : null;
-    })();
+    const running = hcpNow(name, loc);
 
     html += '<div class="table-wide-scroll"><table><thead><tr><th>Round</th><th class="num">Shot</th><th class="num">PB</th>' +
       '<th class="num">Last 3 avg</th>' +
-      (running !== null ? '<th class="num" title="Score your current running handicap is worth on this round">At hcp ' + running + "</th>" : "") +
+      (running !== null ? '<th class="num" title="Score your current ' + loc + ' handicap is worth on this round">At hcp ' + running + "</th>" : "") +
       (holdRank !== null && holdRank !== nextRank ? '<th class="num">' + short[holdRank] + "</th>" : "") +
       '<th class="num">' + short[nextRank] + " (next)</th>" +
       (goal !== null ? '<th class="num">Hcp ' + goal + " target</th>" : "") +
@@ -1900,7 +1897,7 @@
     state.mode[name] = mode;
     html += '<div class="card"><div class="card-head"><div><div class="card-eyebrow">' + ICON.trend + "Handicap progression</div><h2>" + escapeHtml(name) + " handicap over time</h2>" +
       '<p class="card-note">' + (mode === "both"
-        ? "Every shoot's round handicap, with the sheet's running handicap as the line. Choose indoor or outdoor to see classification thresholds."
+        ? "Every shoot's round handicap, with your outdoor handicap (solid) and indoor handicap (dashed) as lines, worked out with Archery GB's rules. Choose indoor or outdoor to see classification thresholds."
         : "Each " + mode + " round's handicap, the line is the average of the last three. Dashed lines are " + mode + " classification thresholds for your category.") +
       " Axis inverted: up is better.</p></div>" +
       '<div class="seg" role="group" aria-label="Rounds to show">' +
@@ -1999,11 +1996,14 @@
     const datasets = [];
     let lineSeries = [];
     if (mode === "both") {
-      lineSeries = entries.filter(function (e) { return e.hcRunning !== null; })
-        .map(function (e) { return { x: e.date.getTime(), y: e.hcRunning, entry: e }; });
-      datasets.push({
-        label: "Running handicap", data: lineSeries, borderColor: color, backgroundColor: color,
-        borderWidth: 2, pointRadius: function (c) { return c.dataIndex === c.dataset.data.length - 1 ? 4 : 0; }, pointBorderColor: surface, pointBorderWidth: 2, pointHoverRadius: 5, stepped: "before", order: 1, hcField: "hcRunning"
+      ["outdoor", "indoor"].forEach(function (loc) {
+        const pts = hcpChartPoints(name, loc);
+        if (!pts.length) return;
+        lineSeries = lineSeries.concat(pts);
+        datasets.push({
+          label: (loc === "indoor" ? "Indoor" : "Outdoor") + " handicap", data: pts, borderColor: color, backgroundColor: color, borderDash: loc === "indoor" ? [6, 4] : undefined,
+          borderWidth: 2, pointRadius: function (c) { return c.dataIndex === c.dataset.data.length - 1 ? 4 : 0; }, pointBorderColor: surface, pointBorderWidth: 2, pointHoverRadius: 5, stepped: "after", order: 1, hcField: "hcRunning"
+        });
       });
     } else {
       const pts = shots.map(function (e) { return { x: e.date.getTime(), y: e.hcRound, entry: e }; });
@@ -2070,10 +2070,10 @@
             refLines: { lines: lines },
             tooltip: Object.assign(baseTooltip(), {
               callbacks: {
-                title: function (items) { const e = items[0] && items[0].raw && items[0].raw.entry; return e ? fmtDate(e.date) : ""; },
+                title: function (items) { const r = items[0] && items[0].raw, e = r && r.entry; return e ? fmtDate(e.date) : r && r.x ? fmtDate(new Date(r.x)) : ""; },
                 label: function (ctx) {
                   const e = ctx.raw && ctx.raw.entry;
-                  if (!e) return ctx.dataset.label + ": " + ctx.formattedValue;
+                  if (!e) return ctx.dataset.label + ": " + ctx.formattedValue + (ctx.raw.why === "reset" ? " (yearly re-assessment)" : "");
                   if (ctx.dataset.showLine === false) return entryTooltipLines(e, "hcRound");
                   return ctx.dataset.label + ": " + ctx.raw.y;
                 }
@@ -2142,7 +2142,7 @@
             refLines: { lines: tlines },
             tooltip: Object.assign(baseTooltip(), {
               callbacks: {
-                title: function (items) { const e = items[0] && items[0].raw && items[0].raw.entry; return e ? fmtDate(e.date) : ""; },
+                title: function (items) { const r = items[0] && items[0].raw, e = r && r.entry; return e ? fmtDate(e.date) : r && r.x ? fmtDate(new Date(r.x)) : ""; },
                 label: function (ctx) {
                   if (ctx.dataset.showLine === false) return entryTooltipLines(ctx.raw.entry, "hcRound");
                   return ctx.dataset.label + ": " + ctx.raw.y;
@@ -2245,14 +2245,15 @@
     const datasets = [], xs = [];
     state.disciplines.forEach(function (d) {
       const color = cssVar(DISCIPLINE_COLOR[d]);
-      const pts = state.byBucket[d].filter(function (e) { return e.hcRunning !== null && inSeason(e, state.season); })
-        .map(function (e) { return { x: e.date.getTime(), y: e.hcRunning, entry: e }; });
-      if (!pts.length) return;
-      pts.forEach(function (p) { xs.push(p.x); });
-      datasets.push({
-        label: d, data: pts, borderColor: color, backgroundColor: color, pointBackgroundColor: color, pointBorderColor: surface,
-        pointBorderWidth: 2, pointRadius: function (c) { return c.dataIndex === c.dataset.data.length - 1 ? 4 : 0; }, pointHoverRadius: 5, borderWidth: 2, stepped: "before",
-        hidden: !!(state.hiddenBows && state.hiddenBows[d])
+      ["outdoor", "indoor"].forEach(function (loc) {
+        const pts = hcpChartPoints(d, loc);
+        if (!pts.length) return;
+        pts.forEach(function (p) { xs.push(p.x); });
+        datasets.push({
+          label: d, loc: loc, data: pts, borderColor: color, backgroundColor: color, pointBackgroundColor: color, pointBorderColor: surface, borderDash: loc === "indoor" ? [6, 4] : undefined,
+          pointBorderWidth: 2, pointRadius: function (c) { return c.dataIndex === c.dataset.data.length - 1 ? 4 : 0; }, pointHoverRadius: 5, borderWidth: 2, stepped: "after",
+          hidden: !!(state.hiddenBows && state.hiddenBows[d])
+        });
       });
     });
     if (datasets.length) {
@@ -2273,8 +2274,12 @@
             legend: legendOpts(false),
             tooltip: Object.assign(baseTooltip(), {
               callbacks: {
-                title: function (items) { const e = items[0] && items[0].raw && items[0].raw.entry; return e ? fmtDate(e.date) : ""; },
-                label: function (ctx) { const e = ctx.raw.entry; return [ctx.dataset.label + ": handicap " + e.hcRunning].concat(entryTooltipLines(e, "hcRound")); }
+                title: function (items) { const r = items[0] && items[0].raw, e = r && r.entry; return e ? fmtDate(e.date) : r && r.x ? fmtDate(new Date(r.x)) : ""; },
+                label: function (ctx) {
+                  const e = ctx.raw.entry, head = ctx.dataset.label + " " + (ctx.dataset.loc || "") + " handicap " + ctx.raw.y;
+                  if (!e) return head + (ctx.raw.why === "reset" ? " (yearly re-assessment)" : "");
+                  return [head].concat(entryTooltipLines(e, "hcRound"));
+                }
               }
             })
           }
@@ -2472,6 +2477,131 @@
   function xKey(e) { return e.code ? e.code.replace(/_compound|_triple/g, "") : "name:" + String(e.round || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
   function xLabel(key, e) { if (key.indexOf("name:") === 0) return e.round; const r = AGB.round(key); return r ? r.n : e.round; }
   function xJunior(c) { return /\bU\s*-?\s*\d{2}\b|^\s*J[\s-]|junior|\bboys?\b|\bgirls?\b|\bcadet/i.test(String(c || "")); }
+  // =====================================================================
+  // Handicaps worked out from the scores (Archery GB SAP 9)
+  // =====================================================================
+  // The score sheets' running handicap column is never re-assessed, so the
+  // site works handicaps out itself, following Archery GB's Shooting
+  // Administrative Procedures (SAP 9), from 2023 when the current tables began:
+  //  - separate outdoor and indoor handicaps for each bow type;
+  //  - each score is rated at its handicap on the 2023 tables;
+  //  - the first handicap is the average of the first three ratings;
+  //  - a rating better than the current handicap moves it to the average of
+  //    the two;
+  //  - re-assessed on 1 January (outdoor) and 1 July (indoor) to the average
+  //    of the best three ratings from the year just ended; with fewer than
+  //    three, the previous re-assessed handicap joins the average; with none,
+  //    the handicap stays as it is;
+  //  - every average is rounded down.
+  // Practice rounds (252s, dozens at one distance) and club-only rounds such
+  // as Frostbite 20 don't count.
+  const HCP_START = { outdoor: new Date(2023, 0, 1), indoor: new Date(2023, 6, 1) };
+  function hcpCounts(e) {
+    return !!(e.code && e.score !== null && !/^misc_/.test(e.code) && e.code !== "frostbite_20" && e.date >= HCP_START[e.loc]);
+  }
+  function hcpNextReset(loc, start) {
+    return loc === "outdoor" ? new Date(start.getFullYear() + 1, 0, 1) : new Date(start.getFullYear() + 1, 6, 1);
+  }
+  function avgDown(list) {
+    return Math.floor(list.reduce(function (s, v) { return s + v; }, 0) / list.length);
+  }
+
+  // list: one archer's entries for one bow type, in date order. Sets
+  // e.hcRunning to the handicap in force for that score's location once the
+  // score is counted (null before there is one, or before 2023) and keeps the
+  // sheet's figure as e.hcSheet. Returns { outdoor, indoor }: each a list of
+  // { date, hc, why } changes ("first", "better", "reset"), up to `until`.
+  function computeHandicaps(list, until) {
+    const out = {};
+    ["outdoor", "indoor"].forEach(function (loc) {
+      const changes = [];
+      let hc = null, lastReset = null, yearStart = HCP_START[loc];
+      let pending = [], ratings = [];
+      const roll = function (to) {
+        let next = hcpNextReset(loc, yearStart);
+        while (next <= to) {
+          if (hc !== null && ratings.length) {
+            const best = ratings.slice().sort(function (a, b) { return a - b; }).slice(0, 3);
+            const v = avgDown(best.length < 3 ? best.concat([lastReset !== null ? lastReset : hc]) : best);
+            lastReset = v;
+            if (v !== hc) changes.push({ date: next, hc: v, why: "reset", from: hc });
+            hc = v;
+          }
+          ratings = [];
+          yearStart = next;
+          next = hcpNextReset(loc, yearStart);
+        }
+      };
+      list.forEach(function (e) {
+        if (e.loc !== loc) return;
+        if (e.hcSheet === undefined) e.hcSheet = e.hcRunning;
+        if (e.date < HCP_START[loc]) { e.hcRunning = null; return; }
+        roll(e.date);
+        const r = hcpCounts(e) ? hcOf(e) : null;
+        if (r !== null) {
+          ratings.push(r);
+          if (hc === null) {
+            pending.push(r);
+            if (pending.length === 3) { hc = avgDown(pending); changes.push({ date: e.date, hc: hc, why: "first", e: e }); }
+          } else if (r < hc) {
+            const from = hc;
+            hc = avgDown([hc, r]);
+            changes.push({ date: e.date, hc: hc, why: "better", from: from, e: e });
+          }
+        }
+        e.hcRunning = hc;
+      });
+      roll(until);
+      out[loc] = changes;
+    });
+    return out;
+  }
+
+  // An archer's handicap for a bow type and location on a date (null: none).
+  function hcpAt(m, bow, loc, when) {
+    const changes = m.hcp && m.hcp[bow] && m.hcp[bow][loc];
+    if (!changes) return null;
+    let v = null;
+    for (let i = 0; i < changes.length && changes[i].date <= when; i++) v = changes[i].hc;
+    return v;
+  }
+
+  function hcOf(e) {
+    if (e._hc === undefined) e._hc = e.code && e.score !== null ? AGB.handicapFor(e.code, e.score) : null;
+    return e._hc;
+  }
+  function hcpNow(b, loc) { return hcpAt(state, b, loc, state.now); }
+  // A bow's handicaps on a date: outdoor, indoor, and the "current" one (the
+  // location of the most recent counting score that has a handicap).
+  function bowHcp(b, when) {
+    when = when || state.now;
+    const o = hcpAt(state, b, "outdoor", when), i = hcpAt(state, b, "indoor", when);
+    if (o === null && i === null) return null;
+    const list = (state.byBucket[b] || []).filter(function (e) { return hcpCounts(e) && e.date <= when; });
+    let loc = null;
+    for (let k = list.length - 1; k >= 0 && !loc; k--) if ((list[k].loc === "indoor" ? i : o) !== null) loc = list[k].loc;
+    if (!loc) loc = o !== null ? "outdoor" : "indoor";
+    return { outdoor: o, indoor: i, loc: loc, hc: loc === "indoor" ? i : o, last: list.length ? list[list.length - 1] : null };
+  }
+  // Handicap changes for a bow and location as { date, hcRunning } points.
+  function hcpSeries(b, loc) {
+    return ((state.hcp && state.hcp[b] && state.hcp[b][loc]) || []).map(function (c) { return { date: c.date, hcRunning: c.hc, why: c.why, entry: c.e || null }; });
+  }
+  // Chart points for a bow and location within the season filter, stepping
+  // at each change and running on to the last shoot (or today).
+  function hcpChartPoints(b, loc) {
+    const inS = function (d) { return inSeason({ date: d, loc: loc }, state.season); };
+    const shot = (state.byBucket[b] || []).filter(function (e) { return e.loc === loc && inSeason(e, state.season); });
+    const pts = hcpSeries(b, loc).filter(function (p) { return inS(p.date); }).map(function (p) { return { x: p.date.getTime(), y: p.hcRunning, entry: p.entry, why: p.why }; });
+    if (shot.length) {
+      const first = shot[0].date, h0 = hcpAt(state, b, loc, first);
+      if (h0 !== null && (!pts.length || pts[0].x > first.getTime())) pts.unshift({ x: first.getTime(), y: h0, entry: null, why: "held" });
+    }
+    if (!pts.length) return pts;
+    const end = state.season === "all" ? state.now : (shot.length ? shot[shot.length - 1].date : null);
+    if (end && end.getTime() > pts[pts.length - 1].x) pts.push({ x: end.getTime(), y: pts[pts.length - 1].y, entry: null, why: "now" });
+    return pts;
+  }
   function latestRunning(list) {
     const w = list.filter(function (e) { return e.hcRunning !== null; });
     return w.length ? w[w.length - 1] : null;
@@ -2502,19 +2632,19 @@
     const prof = profileFor(state.entries);
     const rows = [];
     state.disciplines.forEach(function (b) {
-      const last = latestRunning(state.byBucket[b] || []);
-      if (!last) return;
-      const o = classLevel(last.hcRunning, "outdoor", b, prof.gender, prof.age), i = classLevel(last.hcRunning, "indoor", b, prof.gender, prof.age);
+      const h = bowHcp(b);
+      if (!h) return;
+      const o = classLevel(h.outdoor, "outdoor", b, prof.gender, prof.age), i = classLevel(h.indoor, "indoor", b, prof.gender, prof.age);
       if (o === null && i === null) return;
-      rows.push({ b: b, hc: last.hcRunning, o: o, i: i, lapsed: last.date < new Date(state.now.getTime() - YEAR_MS), best: Math.max(o || 0, i || 0) });
+      rows.push({ b: b, hc: (h.outdoor !== null ? h.outdoor : "-") + " / " + (h.indoor !== null ? h.indoor : "-"), o: o, i: i, lapsed: !h.last || h.last.date < new Date(state.now.getTime() - YEAR_MS), best: Math.max(o || 0, i || 0) });
     });
     if (rows.length < 2) return "";
     rows.sort(function (a, b) { return (a.lapsed - b.lapsed) || b.best - a.best; });
-    return '<div class="card"><h2>Strongest bow right now</h2><p class="card-note">Each bow\'s running handicap placed on the Archery GB classification ladder for that bow, so bows compare fairly ' +
+    return '<div class="card"><h2>Strongest bow right now</h2><p class="card-note">Each bow\'s outdoor and indoor handicaps placed on the Archery GB classification ladders for that bow, so bows compare fairly ' +
       "(the same handicap is a different standard on a barebow and a compound). Level 7 is Master Bowman standard, 6 Bowman 1st Class, 4 Bowman 3rd Class, 1 Archer 3rd Class.</p>" +
-      '<div class="table-scroll"><table><thead><tr><th>Bow</th><th class="num">Handicap</th><th class="num">Outdoor standard</th><th class="num">Indoor standard</th></tr></thead><tbody>' +
+      '<div class="table-scroll"><table><thead><tr><th>Bow</th><th class="num">Handicap (out / in)</th><th class="num">Outdoor standard</th><th class="num">Indoor standard</th></tr></thead><tbody>' +
       rows.map(function (r) {
-        return "<tr><td>" + xDot(r.b) + r.b + (r.lapsed ? ' <span class="muted small">(lapsed)</span>' : "") + '</td><td class="num">' + r.hc + '</td><td class="num">' +
+        return "<tr><td>" + xDot(r.b) + r.b + (r.lapsed ? ' <span class="muted small">(inactive)</span>' : "") + '</td><td class="num">' + r.hc + '</td><td class="num">' +
           (r.o === null ? "-" : "<strong>" + r.o.toFixed(1) + '</strong> <span class="muted small">' + levelName(r.o, "outdoor") + "</span>") + '</td><td class="num">' +
           (r.i === null ? "-" : "<strong>" + r.i.toFixed(1) + '</strong> <span class="muted small">' + levelName(r.i, "indoor") + "</span>") + "</td></tr>";
       }).join("") + "</tbody></table></div></div>";
@@ -2576,10 +2706,11 @@
         let pick = null;
         Object.keys(perBow).forEach(function (bow) {
           const list = perBow[bow], top = list.reduce(function (a, b) { return b.score > a.score ? b : a; });
-          const hcE = latestRunning(m.entries.filter(function (e) { return e.bucket === bow && e.date <= when; }));
+          const hcI = m.entries === state.entries ? hcpAt(state, bow, "indoor", when)
+            : hcpAt({ hcp: { x: computeHandicaps(m.entries.filter(function (e) { return e.bucket === bow; }).map(function (e) { return Object.assign({}, e); }), when) } }, "x", "indoor", when);
           const info = AGB.round(top.code);
           let adj = null;
-          if (hcE && info && info.table) adj = top.score + 1440 - info.table[Math.max(0, Math.min(info.table.length - 1, Math.round(hcE.hcRunning)))];
+          if (hcI !== null && info && info.table) adj = top.score + 1440 - info.table[Math.max(0, Math.min(info.table.length - 1, Math.round(hcI)))];
           else if (top.hcAdjusted !== null) adj = top.hcAdjusted;
           if (adj === null) return;
           if (!pick || list.length > pick.n || (list.length === pick.n && adj > pick.adj)) pick = { adj: adj, n: list.length, e: top };
@@ -2705,9 +2836,9 @@
   // --- Score predictor (each bow tab) ---
   function predictorCard(bow, allEntries) {
     const prof = profileFor(allEntries);
-    const last = latestRunning(allEntries);
+    const cur = bowHcp(bow);
     state.pred = state.pred || {};
-    const p = state.pred[bow] = state.pred[bow] || { hc: last ? last.hcRunning : 50, scope: "mine" };
+    const p = state.pred[bow] = state.pred[bow] || { hc: cur ? cur.hc : 50, scope: "mine" };
     const h = Math.max(0, Math.min(150, Math.round(Number(p.hc))));
     let html = '<div class="card" id="pred-' + slug(bow) + '"><div class="card-head"><div><h2>Score predictor</h2><p class="card-note">The score a handicap predicts on each round and the classification it would reach (' +
       escapeHtml((prof.gender === "Female" ? "female " : "") + ageLabel(prof.age) + " " + bow.toLowerCase()) + ", Archery GB 2023 tables" + (bow === "Flatbow" ? "; flatbow uses the barebow tables" : "") + ").</p></div>" +
@@ -2768,12 +2899,16 @@
       html += '<div class="table-wide-scroll"><table><thead><tr><th>Bow</th><th class="num">Shoots</th><th>Handicap</th><th>Best score</th><th>Best classification</th></tr></thead><tbody>';
       bows.forEach(function (b) {
         const l = byBow[b], all = state.byBucket[b] || [];
-        const before = latestRunning(all.filter(function (e) { return e.date < new Date(y, 0, 1); }));
-        const end = latestRunning(l);
+        const yEnd = new Date(Math.min(new Date(y, 11, 31, 23, 59).getTime(), state.now.getTime()));
+        const hcText = ["outdoor", "indoor"].map(function (loc) {
+          const a = hcpAt(state, b, loc, new Date(y, 0, 1, 0, 0, 1)), z = hcpAt(state, b, loc, yEnd);
+          if (z === null || !l.some(function (e) { return e.loc === loc; })) return null;
+          return (a !== null && a !== z ? a + " → " : "") + "<strong>" + z + "</strong> " + loc;
+        }).filter(Boolean).join("<br>");
         const prof = profileFor(l);
         const best = l.filter(function (e) { return e.hcRound !== null && !e.isLadder; }).sort(function (a, c) { return a.hcRound - c.hcRound; })[0];
         const cls = l.filter(function (e) { return e.classRank >= 0; }).sort(function (a, c) { return c.classRank - a.classRank || (a.loc === "outdoor" ? -1 : 1); })[0];
-        html += "<tr><td>" + xDot(b) + b + '</td><td class="num">' + l.length + "</td><td>" + (end ? (before ? before.hcRunning + " → " : "") + "<strong>" + end.hcRunning + "</strong>" : "-") + "</td><td>" +
+        html += "<tr><td>" + xDot(b) + b + '</td><td class="num">' + l.length + "</td><td>" + (hcText || "-") + "</td><td>" +
           (best ? escapeHtml(best.round) + " " + best.score + ' <span class="muted small">(hcp ' + best.hcRound + ")</span>" : "-") + "</td><td>" + (cls ? escapeHtml(cls.classification) : "-") + "</td></tr>";
         void prof;
       });
@@ -2867,26 +3002,27 @@
     const yearAgo = new Date(state.now.getTime() - YEAR_MS);
     return state.disciplines.map(function (b) {
       const all = state.byBucket[b];
-      const last = latestRunning(all);
-      if (!last) return null;
+      const h = bowHcp(b);
+      if (!h) return null;
       const prof = profileFor(all);
-      const before = latestRunning(all.filter(function (e) { return e.date <= yearAgo; }));
-      const lvlO = classLevel(last.hcRunning, "outdoor", b, prof.gender, prof.age);
-      const lvlI = classLevel(last.hcRunning, "indoor", b, prof.gender, prof.age);
-      const series = all.filter(function (e) { return e.hcRunning !== null; });
+      const lvlO = classLevel(h.outdoor, "outdoor", b, prof.gender, prof.age);
+      const lvlI = classLevel(h.indoor, "indoor", b, prof.gender, prof.age);
+      const change = function (loc, now) { const was = hcpAt(state, b, loc, yearAgo); return now !== null && was !== null ? now - was : null; };
+      const last = h.last || all[all.length - 1];
       return {
-        bow: b, hc: last.hcRunning, last: last, lapsed: last.date < yearAgo, prof: prof,
+        bow: b, hc: h.hc, loc: h.loc, hcO: h.outdoor, hcI: h.indoor, last: last, lapsed: last.date < yearAgo, prof: prof,
         lvlO: lvlO, lvlI: lvlI, lvl: Math.max(lvlO || 0, lvlI || 0),
-        yearChange: before ? last.hcRunning - before.hcRunning : null,
-        series: series
+        yearChange: change(h.loc, h.hc), yearChangeO: change("outdoor", h.outdoor),
+        series: hcpSeries(b, h.loc), seriesO: hcpSeries(b, "outdoor")
       };
     }).filter(Boolean);
   }
 
   // --- Hero: the headline standard and the classification ladder ---
   function heroCard(standings) {
-    const active = standings.filter(function (s) { return !s.lapsed; });
-    const pool = active.length ? active : standings;
+    const withOut = standings.filter(function (s) { return s.hcO !== null; });
+    const active = withOut.filter(function (s) { return !s.lapsed; });
+    const pool = active.length ? active : withOut;
     if (!pool.length) return "";
     const top = pool.slice().sort(function (a, b) { return (b.lvlO || 0) - (a.lvlO || 0); })[0];
     const lvl = top.lvlO;
@@ -2894,25 +3030,25 @@
     const clsName = cls && cls >= 1 ? OUTDOOR_ORDER[cls - 1] : null;
     const nextName = cls !== null && cls < 9 ? OUTDOOR_ORDER[Math.max(cls, 0)] : null;
     const toNext = lvl !== null && cls < 9 ? Math.max(0.1, Math.round((Math.floor(lvl) + 1 - lvl) * 10) / 10) : null;
-    let caption = "Your <strong>" + top.bow.toLowerCase() + "</strong> handicap of " + top.hc + " is " +
+    let caption = "Your <strong>" + top.bow.toLowerCase() + "</strong> outdoor handicap of " + top.hcO + " is " +
       (clsName ? "<strong>" + clsName + "</strong> standard outdoors" : "below Archer 3rd Class standard outdoors") +
       (nextName && toNext !== null ? ", " + toNext.toFixed(1) + " of a class off " + nextName + "." : ".");
-    if (top.yearChange !== null) caption += top.yearChange < 0 ? " Down " + plural(-top.yearChange, "point") + " in the last 12 months." :
-      top.yearChange > 0 ? " Up " + plural(top.yearChange, "point") + " in the last 12 months." : " Unchanged over the last 12 months.";
+    if (top.yearChangeO !== null) caption += top.yearChangeO < 0 ? " Down " + plural(-top.yearChangeO, "point") + " in the last 12 months." :
+      top.yearChangeO > 0 ? " Up " + plural(top.yearChangeO, "point") + " in the last 12 months." : " Unchanged over the last 12 months.";
     const pins = standings.filter(function (s) { return s.lvlO !== null; }).map(function (s) {
-      return { lvl: s.lvlO, colorVar: DISCIPLINE_COLOR[s.bow], tip: s.bow, sub: "Handicap " + s.hc + " · level " + s.lvlO.toFixed(1) + " (" + levelName(s.lvlO, "outdoor") + ")" + (s.lapsed ? " · lapsed" : ""), label: s.bow + " level " + s.lvlO.toFixed(1) };
+      return { lvl: s.lvlO, colorVar: DISCIPLINE_COLOR[s.bow], tip: s.bow, sub: "Outdoor handicap " + s.hcO + " · level " + s.lvlO.toFixed(1) + " (" + levelName(s.lvlO, "outdoor") + ")" + (s.lapsed ? " · inactive" : ""), label: s.bow + " level " + s.lvlO.toFixed(1) };
     });
     const legend = standings.map(function (s) {
-      return '<span><i class="dot" style="background:var(' + DISCIPLINE_COLOR[s.bow] + ')"></i>' + s.bow + " <b>" + (s.lvlO !== null ? escapeHtml(levelName(s.lvlO, "outdoor")) : "-") + "</b>" + (s.lapsed ? ' <span class="tag lapsed">lapsed</span>' : "") + "</span>";
+      return '<span><i class="dot" style="background:var(' + DISCIPLINE_COLOR[s.bow] + ')"></i>' + s.bow + " <b>" + (s.lvlO !== null ? escapeHtml(levelName(s.lvlO, "outdoor")) : "-") + "</b>" + (s.lapsed ? ' <span class="tag lapsed">inactive</span>' : "") + "</span>";
     }).join("");
     return '<div class="card hero" style="--hero-glow:var(' + DISCIPLINE_COLOR[top.bow] + ')">' +
       '<div class="hero-top"><div><div class="card-eyebrow">' + ICON.target + "Current standard · " + escapeHtml(top.bow) + "</div>" +
-      '<div class="hero-figure">' + top.hc + '<span class="unit">handicap</span>' + deltaHtml(top.yearChange, true, "in 12 mo") + "</div>" +
+      '<div class="hero-figure">' + top.hcO + '<span class="unit">outdoor handicap</span>' + deltaHtml(top.yearChangeO, true, "in 12 mo") + "</div>" +
       '<p class="hero-caption">' + caption + "</p></div>" +
       '<div class="chips">' + (clsName ? '<span class="chip"><i class="dot" style="background:var(' + DISCIPLINE_COLOR[top.bow] + ')"></i>' + escapeHtml(clsName) + "</span>" : "") +
       '<span class="chip">Level ' + (lvl !== null ? lvl.toFixed(1) : "-") + " of 9</span></div></div>" +
       ladderHtml("outdoor", pins, lvl, DISCIPLINE_COLOR[top.bow], legend) +
-      '<p class="card-note" style="margin:14px 0 0">Each bow\'s running handicap placed on the Archery GB outdoor classification ladder for that bow, so bows compare fairly: the same handicap is a different standard on a barebow and a compound.</p></div>';
+      '<p class="card-note" style="margin:14px 0 0">Each bow\'s outdoor handicap placed on the Archery GB outdoor classification ladder for that bow, so bows compare fairly: the same handicap is a different standard on a barebow and a compound.</p></div>';
   }
 
   // --- Bow summary list ---
@@ -2928,12 +3064,12 @@
       const sub = [o ? o.name : null, i ? i.name : null].filter(Boolean).join(" · ") || "No classification yet";
       const spark = s ? sparkSvg(s.series.slice(-12).map(function (e) { return e.hcRunning; }), DISCIPLINE_COLOR[b], { invert: true, height: 26 }) : "";
       return '<a class="bow-row" href="#' + slug(b) + '" data-nav="' + slug(b) + '"><span class="bow-bar" style="background:var(' + DISCIPLINE_COLOR[b] + ')"></span>' +
-        '<span style="min-width:0"><span class="bow-name">' + b + "</span>" + (s && s.lapsed ? '<span class="tag lapsed">lapsed</span>' : "") +
+        '<span style="min-width:0"><span class="bow-name">' + b + "</span>" + (s && s.lapsed ? '<span class="tag lapsed">inactive</span>' : "") +
         '<span class="bow-sub" style="display:block">' + plural(shots, "shoot") + " · " + escapeHtml(sub) + "</span>" +
         (spark ? '<span style="display:block;width:120px;margin-top:6px">' + spark + "</span>" : "") + "</span>" +
-        '<span class="bow-hc"><b>' + (s ? s.hc : "-") + "</b><span>handicap</span></span></a>";
+        '<span class="bow-hc"><b>' + (s ? s.hc : "-") + "</b><span>" + (s ? s.loc : "handicap") + "</span></span></a>";
     }).join("");
-    return '<div class="card"><div class="card-head"><div><h2>Bow types</h2><p class="card-note" style="margin-bottom:6px">Running handicap and best classification for each bow. Select one for its full analysis.</p></div></div><div class="bow-list">' + rows + "</div></div>";
+    return '<div class="card"><div class="card-head"><div><h2>Bow types</h2><p class="card-note" style="margin-bottom:6px">Current handicap (outdoor or indoor, whichever you shot last) and best classification for each bow. Select one for its full analysis.</p></div></div><div class="bow-list">' + rows + "</div></div>";
   }
 
   // Entries in the chosen period: the season filter, or the last 12 months.
@@ -2978,7 +3114,7 @@
       spark: p.prev ? sparkSvg(byMonth(sparkSrc, function (e) { return e.events.some(function (x) { return x.type === "pb"; }) ? 1 : 0; }), "--text-muted", { height: 30 }) : ""
     });
     if (best) {
-      html += kpi('<i class="dot" style="background:var(' + DISCIPLINE_COLOR[best.bow] + ')"></i>Lowest handicap', best.hc, best.bow + (best.lapsed ? " (lapsed)" : "") + " · best ever " +
+      html += kpi('<i class="dot" style="background:var(' + DISCIPLINE_COLOR[best.bow] + ')"></i>Lowest handicap', best.hc, best.bow + " " + best.loc + (best.lapsed ? " (inactive)" : "") + " · best ever " +
         Math.min.apply(null, best.series.map(function (e) { return e.hcRunning; })), {
         delta: deltaHtml(best.yearChange, true),
         spark: sparkSvg(best.series.filter(function (e) { return e.date > new Date(state.now.getTime() - 2 * YEAR_MS); }).map(function (e) { return e.hcRunning; }), DISCIPLINE_COLOR[best.bow], { invert: true, height: 30 })
@@ -3228,15 +3364,15 @@
 
   // --- Overview: handicap chart card with legend toggles ---
   function overviewChartCard() {
-    const series = state.disciplines.filter(function (d) { return state.byBucket[d].some(function (e) { return e.hcRunning !== null && inSeason(e, state.season); }); });
+    const series = state.disciplines.filter(function (d) { return hcpChartPoints(d, "outdoor").length || hcpChartPoints(d, "indoor").length; });
     state.hiddenBows = state.hiddenBows || {};
     const legend = series.length > 1 ? '<div class="legend" role="group" aria-label="Bows shown on the chart">' + series.map(function (d) {
       return '<button type="button" data-legend="' + escapeHtml(d) + '" aria-pressed="' + !state.hiddenBows[d] + '"><i class="dot" style="background:var(' + DISCIPLINE_COLOR[d] + ')"></i>' + d + "</button>";
     }).join("") + "</div>" : "";
     return '<div class="card"><div class="card-head"><div><div class="card-eyebrow">' + ICON.trend + "Handicap progression</div><h2>" +
-      (series.length === 1 ? "Running handicap: " + series[0] : "Running handicap by bow") + "</h2>" +
-      '<p class="card-note">From the sheet. Lower is better, so the axis is inverted and an upward line means improvement.' + (legend ? " Select a bow to hide or show it." : "") + "</p></div>" + legend + "</div>" +
-      '<div class="chart-box"><canvas id="chart-overview" role="img" aria-label="Running handicap by bow type over time"></canvas></div></div>';
+      (series.length === 1 ? "Handicap: " + series[0] : "Handicap by bow") + "</h2>" +
+      '<p class="card-note">Worked out from your scores with Archery GB\'s rules: outdoor solid, indoor dashed, each re-assessed once a year. Lower is better, so the axis is inverted and an upward line means improvement.' + (legend ? " Select a bow to hide or show it." : "") + "</p></div>" + legend + "</div>" +
+      '<div class="chart-box"><canvas id="chart-overview" role="img" aria-label="Handicap by bow type over time"></canvas></div></div>';
   }
 
   // --- Overview: calendar heatmap with an activity strip ---
@@ -3304,14 +3440,16 @@
   function bowHeroCard(name, allEntries) {
     const s = bowStandings().filter(function (x) { return x.bow === name; })[0];
     const colorVar = DISCIPLINE_COLOR[name];
-    const eyebrow = '<div class="card-eyebrow"><i class="dot" style="background:var(' + colorVar + ')"></i>' + escapeHtml(name) + " · running handicap</div>";
-    if (!s) return '<div class="card hero">' + eyebrow + '<p class="muted">No running handicap on the sheet for this bow yet.</p></div>';
+    void allEntries;
+    const eyebrow = '<div class="card-eyebrow"><i class="dot" style="background:var(' + colorVar + ')"></i>' + escapeHtml(name) + " · " + (s ? s.loc : "") + " handicap</div>";
+    if (!s) return '<div class="card hero">' + eyebrow + '<p class="muted">No handicap for this bow yet: it takes three scores on recognised rounds (not 252s or practice rounds) from 2023 on.</p></div>';
     const lowest = minBy(s.series, function (e) { return e.hcRunning; });
     let caption = "From your last " + name.toLowerCase() + " score on " + fmtDate(s.last.date) + ". ";
-    if (s.lapsed) caption += "<strong>Lapsed</strong>: Archery GB handicaps lapse after 12 months without a score. ";
-    caption += "Lowest ever <strong>" + lowest.hcRunning + "</strong> (" + fmtDate(lowest.date) + ").";
+    if (s.lapsed) caption += "<strong>Inactive</strong>: no score with this bow in the last 12 months. ";
+    caption += "Outdoor " + (s.hcO !== null ? "<strong>" + s.hcO + "</strong>" : "none yet") + ", indoor " + (s.hcI !== null ? "<strong>" + s.hcI + "</strong>" : "none yet") + ". ";
+    caption += "Lowest ever " + s.loc + " <strong>" + lowest.hcRunning + "</strong> (" + fmtDate(lowest.date) + "). Re-assessed each year on 1 January (outdoor) and 1 July (indoor).";
     const pin = function (lvl, loc) {
-      return [{ lvl: lvl, colorVar: colorVar, tip: name + " · " + (loc === "indoor" ? "indoor" : "outdoor"), sub: "Handicap " + s.hc + " · level " + (lvl !== null ? lvl.toFixed(1) : "-") + " (" + levelName(lvl, loc) + ")", label: loc + " level " + (lvl !== null ? lvl.toFixed(1) : "none") }];
+      return [{ lvl: lvl, colorVar: colorVar, tip: name + " · " + (loc === "indoor" ? "indoor" : "outdoor"), sub: "Handicap " + (loc === "indoor" ? s.hcI : s.hcO) + " · level " + (lvl !== null ? lvl.toFixed(1) : "-") + " (" + levelName(lvl, loc) + ")", label: loc + " level " + (lvl !== null ? lvl.toFixed(1) : "none") }];
     };
     const spark = sparkSvg(s.series.filter(function (e) { return e.date > new Date(state.now.getTime() - 2 * YEAR_MS); }).map(function (e) { return e.hcRunning; }), colorVar, { invert: true, height: 44 });
     return '<div class="card hero" style="--hero-glow:var(' + colorVar + ')"><div class="hero-top"><div>' + eyebrow +
@@ -3362,7 +3500,7 @@
       const ico = t.disc ? '<span class="tab-dot" style="background:var(' + DISCIPLINE_COLOR[t.disc] + ')"></span>' : ICON[t.id] || "";
       return '<button type="button" role="tab" id="tab-' + t.id + '" aria-controls="panel-' + t.id + '" aria-selected="' + sel + '" tabindex="' + (sel ? 0 : -1) + '" data-tab="' + t.id + '">' +
         '<span class="nav-ico" aria-hidden="true">' + ico + "</span>" + escapeHtml(t.label) +
-        (s ? '<span class="nav-meta" title="Running handicap">' + s.hc + "</span>" : "") + "</button>";
+        (s ? '<span class="nav-meta" title="' + (s ? s.loc : "") + ' handicap">' + s.hc + "</span>" : "") + "</button>";
     };
     tabsEl.innerHTML = btn(tabs[0]) +
       (state.disciplines.length ? '<div class="nav-group" role="presentation">Bow types</div>' : "") +
@@ -3669,7 +3807,7 @@
 
   function computeEvents(list, disc) {
     const best = {}, seasonBest = {}, ladderQ = {};
-    let lowRun = null;
+    const prevRun = {};
     list.forEach(function (e) {
       e.events = [];
       if (e.round && e.score !== null) {
@@ -3693,8 +3831,9 @@
         }
       }
       if (e.hcRunning !== null) {
-        if (lowRun !== null && e.hcRunning < lowRun) e.events.push({ type: "hcp", text: "Handicap down to " + e.hcRunning + " (from " + lowRun + ")" });
-        if (lowRun === null || e.hcRunning < lowRun) lowRun = e.hcRunning;
+        const was = prevRun[e.loc];
+        if (was !== undefined && e.hcRunning < was) e.events.push({ type: "hcp", text: (e.loc === "indoor" ? "Indoor" : "Outdoor") + " handicap down to " + e.hcRunning + " (from " + was + ")" });
+        prevRun[e.loc] = e.hcRunning;
       }
       if (e.placing && e.placing <= 3) e.events.push({ type: "podium", text: ordinal(e.placing) + " place" + (e.round ? " (" + e.round + ")" : "") });
     });
@@ -3711,8 +3850,12 @@
     state.byBucket = {};
     entries.forEach(function (e) { (state.byBucket[e.bucket] = state.byBucket[e.bucket] || []).push(e); });
     state.disciplines = DISCIPLINE_ORDER.filter(function (d) { return state.byBucket[d] && state.byBucket[d].length; });
-    Object.keys(state.byBucket).forEach(function (b) { computeEvents(state.byBucket[b], b); });
     state.now = new Date();
+    // Handicaps are worked out from the scores with Archery GB's rules
+    // (the sheet's running handicap column is never re-assessed).
+    state.hcp = {};
+    Object.keys(state.byBucket).forEach(function (b) { state.hcp[b] = computeHandicaps(state.byBucket[b], state.now); });
+    Object.keys(state.byBucket).forEach(function (b) { computeEvents(state.byBucket[b], b); });
     document.getElementById("loadError").hidden = true;
     render(mode);
   }
