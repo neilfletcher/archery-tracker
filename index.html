@@ -2475,7 +2475,7 @@
   function xDot(bow) { return DISCIPLINE_COLOR[bow] ? '<span class="tab-dot" style="background:var(' + DISCIPLINE_COLOR[bow] + ');display:inline-block;margin-right:5px" aria-hidden="true"></span>' : ""; }
   function xNorm(s) { return String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim(); }
   function xKey(e) { return e.code ? e.code.replace(/_compound|_triple/g, "") : "name:" + String(e.round || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
-  function xLabel(key, e) { if (key.indexOf("name:") === 0) return e.round; const r = AGB.round(key); return r ? r.n : e.round; }
+  function xLabel(key, e) { if (key.indexOf("name:") === 0) return e.round; const l = /^misc_252_(\d+)$/.exec(key); if (l) return "252 at " + l[1] + " yds"; const r = AGB.round(key); return r ? r.n : e.round; }
   function xJunior(c) { return /\bU\s*-?\s*\d{2}\b|^\s*J[\s-]|junior|\bboys?\b|\bgirls?\b|\bcadet/i.test(String(c || "")); }
   // =====================================================================
   // Handicaps worked out from the scores (Archery GB SAP 9)
@@ -2815,7 +2815,7 @@
     const best = {};
     state.club.members.forEach(function (m) {
       m.entries.forEach(function (e) {
-        if (!e.round || e.score === null || e.isLadder || !DISCIPLINE_COLOR[e.bucket]) return;
+        if (!e.round || e.score === null || !DISCIPLINE_COLOR[e.bucket]) return;
         const k = xKey(e) + "|" + e.bucket + "|" + (e.gender === "Female" ? "Women" : "Men") + "|" + e.loc;
         const b = best[k];
         if (!b || e.score > b.e.score || (e.score === b.e.score && e.date < b.e.date)) best[k] = { e: e, id: m.id, k: k };
