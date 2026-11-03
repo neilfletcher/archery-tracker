@@ -3743,6 +3743,39 @@
   // Google's CSV export does not send CORS headers, so a fetch() from github.io
   // is blocked. The gviz endpoint supports a JSONP callback via <script>, which
   // is not subject to CORS.
+  // Once the club's score book is live, an archer's scores come from the
+  // club records service (by their workbook id or private tracker link);
+  // until then, and if the service can't be reached, from the workbook.
+  function loadFromService(params, timeoutMs) {
+    return new Promise(function (resolve) {
+      const cb = "__trkArcher" + Date.now() + Math.floor(Math.random() * 1e6);
+      const s = document.createElement("script");
+      let done = false;
+      const finish = function (v) {
+        if (done) return; done = true; clearTimeout(timer);
+        try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+        if (s.parentNode) s.parentNode.removeChild(s);
+        resolve(v);
+      };
+      const timer = setTimeout(function () { finish(null); }, timeoutMs || 20000);
+      window[cb] = function (res) { finish(res && res.ok && Array.isArray(res.rows) ? res : (res && res.error ? res : null)); };
+      s.onerror = function () { finish(null); };
+      const q = Object.keys(params).filter(function (k) { return params[k]; }).map(function (k) { return k + "=" + encodeURIComponent(params[k]); }).join("&");
+      s.src = CLUB_SERVICE + "?action=archer&" + q + "&callback=" + cb;
+      document.head.appendChild(s);
+    });
+  }
+  function loadArcherRows(sheetId, gid, token) {
+    return loadFromService({ sheet: sheetId || "", t: token || "" }).then(function (res) {
+      if (res && res.ok) return { rows: res.rows, name: res.name || "", junior: !!res.junior, source: "scorebook" };
+      if (!sheetId) throw new Error(res && res.error === "not-found" ? "This tracker link isn't recognised. Ask the record keeper for a new one." : "Couldn't reach the club's score book.");
+      return loadViaJsonp(sheetId, gid).then(function (response) {
+        const label = String((((response.table || {}).cols || [])[1] || {}).label || "").replace(/\s*category\s*$/i, "").trim();
+        return { rows: rowsFromGviz(response), name: label, source: "sheet" };
+      });
+    });
+  }
+
   function loadViaJsonp(sheetId, gid, timeoutMs) {
     return new Promise(function (resolve, reject) {
       const cbName = "__archeryGvizCb" + Date.now() + Math.floor(Math.random() * 1e6);
@@ -3894,8 +3927,8 @@
       } catch (e) { /* bad cache: ignore */ }
     }
 
-    loadViaJsonp(SHEET_ID, SHEET_GID).then(function (response) {
-      const rows = rowsFromGviz(response);
+    loadArcherRows(SHEET_ID, SHEET_GID).then(function (got) {
+      const rows = got.rows;
       if (JSON.stringify(rows) !== cachedKey) applyRows(rows, state.entries.length ? "none" : "enter");
       else if (!state.entries.length) applyRows(rows);
       store(STORAGE.cache, JSON.stringify({ savedAt: Date.now(), rows: rows }));
